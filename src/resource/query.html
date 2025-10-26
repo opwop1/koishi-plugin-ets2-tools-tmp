@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <link href="./package/leaflet/leaflet.min.css" rel="stylesheet">
+  <script src="./package/leaflet/leaflet.min.js"></script>
+  <style>
+    @font-face {
+      font-family: 'segui-emj';
+      src: url('./package/SEGUIEMJ.TTF');
+      font-weight: normal;
+      font-style: normal;
+    }
+    body {
+      font-family: 'segui-emj', 'sans-serif';
+    }
+
+    .border {
+      border: 1px solid red;
+    }
+
+    #container {
+      padding-bottom: 16px;
+    }
+
+    .form-box {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .form-box .form-item {
+      width: 50%;
+    }
+    .form-box .form-item.full {
+      width: 100%;
+    }
+
+    #container {
+      width: 400px;
+      background: linear-gradient(135deg, #1f2f54, #0f2c2a);
+      overflow: hidden;
+    }
+
+    .header {
+      height: 100px;
+      background-color: rgba(0, 0, 0, .1);
+      display: flex;
+      align-items: center;
+      padding: 0 26px;
+      box-shadow: 0 0 16px rgba(0, 0, 0, .4);
+    }
+    .header .avatar {
+      width: 64px;
+      height: 64px;
+    }
+    .header .info {
+      flex: 1;
+      padding-left: 16px;
+    }
+    .header .info .name {
+      color: #b0c7ff;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .header .info .tmp-id {
+      color: #aaaaaa;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .header .info .group {
+      color: #ffffff;
+      font-size: 12px;
+      padding: 2px 4px;
+      margin-left: 6px;
+      border-radius: 4px;
+      text-shadow: 0 4px 4px rgba(0, 0, 0, 0.8),
+                    0 -4px 4px rgba(0, 0, 0, 0.8);
+    }
+
+    .details-container {
+      padding: 16px 20px 0 20px;
+    }
+    .details-container .form-item {
+      background-color: rgba(0, 0, 0, 0.2);
+      box-sizing: border-box;
+    }
+    .details-container .form-item:nth-child(1) {
+      margin-top: 0;
+    }
+    .details-container .form-item .label {
+      color: #dddddd;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 4px 8px;
+    }
+    .details-container .form-item .value {
+      color: #ffffff;
+      padding: 4px 8px;
+    }
+
+    .ban-container {
+      margin: 16px 20px 0 20px;
+      background-color: rgba(227, 92, 92, 0.3);
+    }
+    .ban-header {
+      width: 100%;
+      height: 30px;
+      box-sizing: border-box;
+      padding: 0 12px;
+      color: #ffffff;
+      font-size: 14px;
+      line-height: 30px;
+      background-color: rgba(227, 92, 92, 0.6);
+    }
+    .ban-body {
+      padding: 12px 16px;
+    }
+    .ban-body .ban-hidden {
+      color: #cccccc;
+      font-size: 14px;
+      font-style: italic;
+      text-align: center;
+    }
+    .ban-body .form-item {
+      margin-top: 8px;
+    }
+    .ban-body .form-item:nth-child(1),
+    .ban-body .form-item:nth-child(2) {
+      margin-top: 0;
+    }
+    .ban-body .form-item .label {
+      color: #f3f3f3;
+      font-size: 12px;
+    }
+    .ban-body .form-item .value {
+      color: #eeeeee;
+      font-size: 14px;
+      word-wrap: break-word;
+      word-break: break-all;
+    }
+
+    .position-container {
+      margin: 16px 20px;
+    }
+    .position-container .position-header {
+      width: 100%;
+      height: 30px;
+      box-sizing: border-box;
+      padding: 0 12px;
+      color: #ffffff;
+      font-size: 14px;
+      line-height: 30px;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+    .position-container #map {
+      width: 100%;
+      height: 150px;
+      background-color: rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="header">
+      <img class="avatar" id="tmp-avatar" src="" alt="avatar"/>
+      <div class="info">
+        <div class="name" id="tmp-name">-</div>
+        <div class="tmp-id" id="tmp-id"></div>
+      </div>
+    </div>
+    <div class="details-container">
+      <div class="form-box">
+        <div class="form-item full">
+          <div class="label">🎮SteamID</div>
+          <div class="value" id="tmp-steam-id"></div>
+        </div>
+        <div class="form-item full">
+          <div class="label">📑注册日期</div>
+          <div class="value" id="tmp-register-date"></div>
+        </div>
+        <div class="form-item full" id="tmp-vtc-box">
+          <div class="label">🚚所属车队</div>
+          <div class="value" id="tmp-vtc-name"></div>
+        </div>
+        <div class="form-item full" id="tmp-vtc-role-box">
+          <div class="label">🚚车队角色</div>
+          <div class="value" id="tmp-vtc-role"></div>
+        </div>
+        <div class="form-item" id="tmp-sponsor-box">
+          <div class="label">🎁赞助用户</div>
+          <div class="value" id="tmp-sponsor-amount"></div>
+        </div>
+        <div class="form-item" id="tmp-sponsor-cumulative-box">
+          <div class="label">🎁累计赞助</div>
+          <div class="value" id="tmp-sponsor-cumulative"></div>
+        </div>
+      </div>
+    </div>
+    <div class="position-container" id="position-box">
+      <div class="position-header" id="position-title"></div>
+      <div id="map"></div>
+    </div>
+    <div class="ban-container" id="ban-box">
+      <div class="ban-header">封禁中</div>
+      <div class="ban-body">
+        <div class="ban-hidden" id="ban-hidden-box">玩家隐藏信息</div>
+        <div class="form-box" id="ban-info-box">
+          <div class="form-item">
+            <div class="label">截止时间</div>
+            <div class="value" id="ban-until"></div>
+          </div>
+          <div class="form-item">
+            <div class="label">封禁次数</div>
+            <div class="value" id="ban-count"></div>
+          </div>
+          <div class="form-item full">
+            <div class="label">原因</div>
+            <div class="value" id="ban-reason"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let mapConfig = {
+      ets: {
+        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
+        multipliers: {
+          x: 71282,
+          y: 56532
+        },
+        breakpoints: {
+          uk: {
+            x: -31056.8,
+            y: -5832.867
+          }
+        },
+        bounds: {
+          y: 131072,
+          x: 131072
+        },
+        maxZoom: 8,
+        minZoom: 2,
+        // 游戏地转地图坐标
+        calculateMapCoordinate (x, y) {
+          return [
+            x / 1.325928 + mapConfig.ets.multipliers.x,
+            y / 1.325928 + mapConfig.ets.multipliers.y
+          ];
+        }
+      },
+      promods: {
+        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/promods/05102019/{z}/{x}/{y}.png',
+        multipliers: {
+          x: 51953,
+          y: 76024
+        },
+        breakpoints: {
+          uk: {
+            x: -31056.8,
+            y: -5832.867
+          }
+        },
+        bounds: {
+          y: 131072,
+          x: 131072
+        },
+        maxZoom: 8,
+        minZoom: 2,
+        // 游戏地转地图坐标
+        calculateMapCoordinate (x, y) {
+          return [
+            x / 2.598541 + mapConfig.promods.multipliers.x,
+            y / 2.598541 + mapConfig.promods.multipliers.y
+          ]
+        }
+      }
+    }
+
+    function init(data) {
+      document.getElementById('tmp-name').innerText = data.name
+      document.getElementById('tmp-avatar').src = data.avatarUrl
+        document.getElementById('tmp-id').innerHTML = `TMP#${data.tmpId} <span class="group" style="background-color: #${data.groupColor}">${data.groupName}</span>`
+      document.getElementById('tmp-steam-id').innerText = data.steamId
+      document.getElementById('tmp-register-date').innerText = data.registerDate
+      if (data.isJoinVtc) {
+        document.getElementById('tmp-vtc-name').innerText = data.vtcName
+        document.getElementById('tmp-vtc-role').innerText = data.vtcRole
+      } else {
+        document.getElementById('tmp-vtc-box').remove()
+        document.getElementById('tmp-vtc-role-box').remove()
+      }
+      if (data.isSponsor && !data.sponsorHide) {
+        document.getElementById('tmp-sponsor-amount').innerText = '$' + Math.floor(data.sponsorAmount / 100)
+        document.getElementById('tmp-sponsor-cumulative').innerText = '$' + Math.floor(data.sponsorCumulativeAmount / 100)
+      } else {
+        document.getElementById('tmp-sponsor-box').remove()
+        document.getElementById('tmp-sponsor-cumulative-box').remove()
+      }
+      if (data.isOnline) {
+        document.getElementById('position-title').innerText = `${data.onlineServerName} · ${data.onlineCountry}-${data.onlineCity}`
+        map(data.onlineMapType, data.onlineX, data.onlineY)
+      } else {
+        document.getElementById('position-box').remove()
+      }
+      if (data.isBan) {
+        if (data.banHide) {
+          document.getElementById('ban-info-box').remove()
+        } else {
+          document.getElementById('ban-hidden-box').remove()
+          document.getElementById('ban-until').innerText = (data.banUntil || '永久')
+          document.getElementById('ban-count').innerText = (data.banCount || 0) + '次'
+          document.getElementById('ban-reason').innerText = data.banReasonZh || data.banReason
+        }
+      } else {
+        document.getElementById('ban-box').remove()
+      }
+    }
+
+    function map(mapType, x, y) {
+      // 定义地图
+      let map = L.map('map', {
+        attributionControl: false,
+        crs: L.CRS.Simple,
+        zoomControl: false
+      });
+
+      // 边界
+      let bounds = L.latLngBounds(
+        map.unproject([0, mapConfig[mapType].bounds.y], mapConfig[mapType].maxZoom),
+        map.unproject([mapConfig[mapType].bounds.x, 0], mapConfig[mapType].maxZoom)
+      );
+
+      // 瓦片地图
+      L.tileLayer(mapConfig[mapType].tileUrl, {
+        minZoom: 2,
+        maxZoom: 10,
+        maxNativeZoom: 8,
+        tileSize: 512,
+        bounds: bounds,
+        reuseTiles: true
+      }).addTo(map);
+      map.setMaxBounds(
+        new L.LatLngBounds(
+          map.unproject([0, mapConfig[mapType].bounds.y], mapConfig[mapType].maxZoom),
+          map.unproject([mapConfig[mapType].bounds.x, 0], mapConfig[mapType].maxZoom)
+        )
+      );
+
+      L.circleMarker(map.unproject(mapConfig[mapType].calculateMapCoordinate(x, y), 8), {
+        color: '#2f2f2f',       // 标记点边框颜色
+        weight: 2,              // 标记点边框大小
+        fillColor: '#1cb715',   // 标记点填充颜色
+        fillOpacity: 1,         // 标记点填充不透明度（0到1之间的值）
+        radius: 5,              // 标记点半径（以像素为单位）
+        zIndex: 1000
+      }).addTo(map);
+
+      // 设置中心点
+      map.setView(map.unproject(mapConfig[mapType].calculateMapCoordinate(x, y), 8), 5);
+    }
+  </script>
+</body>
+</html>

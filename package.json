@@ -1,9 +1,14 @@
 {
   "name": "koishi-plugin-ets2-tools-tmp",
   "description": "欧卡2 tmp在线查询及车队平台查询",
-  "version": "0.0.1",
+  "version": "0.0.5",
+  "contributors": [
+    "opwop <slhp1013@qq.com>",
+    "bot_actions <168329908@qq.com>"
+  ],
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
+  "homepage": "https://github.com/opwop1/koishi-plugin-ets2-tools-tmp",
   "files": [
     "lib",
     "dist"
@@ -13,9 +18,22 @@
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "ETS2",
+    "欧卡2",
+    "欧洲卡车模拟"
   ],
-  "devDependencies": {},
+  "koishi": {
+    "service": {
+      "required": [
+        "database"
+      ]
+    }
+  },
+  "dependencies": {
+    "dayjs": "^1.11.13",
+    "js-md5": "^0.8.3"
+  },
   "peerDependencies": {
     "koishi": "^4.18.7"
   }
