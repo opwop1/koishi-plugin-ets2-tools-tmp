@@ -3,172 +3,92 @@ module.exports = async (ctx, cfg, session, targetTeamId) => {
     const { adminUsers } = cfg.resetPassword;
     const currentUserQQ = session.userId;
     const isAdmin = adminUsers.includes(currentUserQQ);
-    if (session.channelId !== `private:${session.userId}`) {
-        let qq = targetTeamId;
+    const isPrivateChat = session.channelId === `private:${currentUserQQ}`;
+    const log = (msg) => logOutput && ctx.logger.info(msg);
+    const fetchData = async (apiUrl) => {
         try {
-            if (!isAdmin) {
-                return "您没有权限重置其他用户的密码，请联系管理员重置";
-            }
-            if (qq.startsWith("<at ")) {    
-                if (qq.startsWith('<at ')) {
-                    qq = qq.replace('<at ', '');
-                }
-                let id = '';
-                const idStart = qq.indexOf('id="');
-                if (idStart !== -1) {
-                    const valueStart = idStart + 4;
-                    const valueEnd = qq.indexOf('"', valueStart);
-                    if (valueEnd !== -1) {
-                        id = qq.substring(valueStart, valueEnd);
-                    }
-                }
-                queryQQ = id;
-                if (!/^\d+$/.test(queryQQ)) {
-                    return "获取qq号错误，请使用车队编号重置";
-                }
-                if (logOutput) {
-                    ctx.logger.info(`管理员 ${currentUserQQ} 请求重置 qq号 ${queryQQ} 的密码`);
-                }
-                const verifyUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=1&tmpId=&tmpName=&teamId=&qq=${queryQQ}&state=0&teamRole=`;
-                const verifyResponse = await ctx.http.post(verifyUrl);
-                if (verifyResponse.code !== 0 || !verifyResponse.page?.list?.length) {
-                    return `未找到qq号为 ${queryQQ} 的用户信息`;
-                }
-                const userInfo = verifyResponse.page.list[0];
-                if (logOutput) {
-                    ctx.logger.info(`目标用户信息: ${userInfo.tmpName} (QQ: ${userInfo.qq})`);
-                }
-                const teamId = userInfo.teamId;
-                const resetPasswordUrl = `https://${url}/api/user/info/resetPasswordWithTeamId?token=${token}&teamId=${teamId}`;
-                if (logOutput) {
-                    ctx.logger.info(`请求重置密码: ${resetPasswordUrl}`);
-                }
-                const resetResponse = await ctx.http.post(resetPasswordUrl);
-                if (logOutput) {
-                    ctx.logger.info(`重置密码响应: ${JSON.stringify(resetResponse)}`);
-                }
-                if (resetResponse.code === 0) {
-                    if (targetTeamId) {
-                        return `管理员操作：车队编号 ${teamId} 的密码重置成功！新密码已发送到用户邮箱。`;
-                    } else {
-                        return "密码重置成功！新密码已发送到您的邮箱，请查收。";
-                    }
-                } else {
-                    return `密码重置失败: ${resetResponse.msg || "未知错误"}`;
-                }
-            }
-            let teamId = qq;
-            if (logOutput) {
-                ctx.logger.info(`管理员 ${currentUserQQ} 请求重置 车队编号 ${teamId} 的密码`);
-            }
-            const verifyUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=1&tmpId=&tmpName=&teamId=${teamId}&qq=&state=0&teamRole=`;
-            const verifyResponse = await ctx.http.post(verifyUrl);
-            if (verifyResponse.code !== 0 || !verifyResponse.page?.list?.length) {
-                return `未找到车队编号为 ${teamId} 的用户信息`;
-            }
-            const userInfo = verifyResponse.page.list[0];
-            if (logOutput) {
-                ctx.logger.info(`目标用户信息: ${userInfo.tmpName} (QQ: ${userInfo.qq})`);
-            }
-            const resetPasswordUrl = `https://${url}/api/user/info/resetPasswordWithTeamId?token=${token}&teamId=${teamId}`;
-            if (logOutput) {
-                ctx.logger.info(`请求重置密码: ${resetPasswordUrl}`);
-            }
-            const resetResponse = await ctx.http.post(resetPasswordUrl);
-            if (logOutput) {
-                ctx.logger.info(`重置密码响应: ${JSON.stringify(resetResponse)}`);
-            }
-            if (resetResponse.code === 0) {
-                if (targetTeamId) {
-                    return `管理员操作：车队编号 ${teamId} 的密码重置成功！新密码已发送到用户邮箱。`;
-                } else {
-                    return "密码重置成功！新密码已发送到您的邮箱，请查收。";
-                }
-            } else {
-                return `密码重置失败: ${resetResponse.msg || "未知错误"}`;
-            }
+            const response = await ctx.http.post(apiUrl);
+            log(`请求响应: ${JSON.stringify(response)}`);
+            return response;
         } catch (error) {
-            ctx.logger.error(`密码重置过程出错: ${error}`);
-            if (error.response) {
-                return `请求失败: ${error.response.status} ${error.response.statusText}`;
-            } else if (error.code) {
-                return `网络错误: ${error.code}`;
-            } else {
-                return "系统错误，请稍后重试";
-            }
+            log(`请求错误: ${error}`);
+            throw error;
         }
-    }
+    };
+
+    const getUserInfo = async (params) => {
+        const query = new URLSearchParams({ token, page: 0, limit: 1, ...params }).toString();
+        const userInfoUrl = `https://${url}/api/user/info/list?${query}`;
+        log(`获取用户信息: ${userInfoUrl}`);
+        const response = await fetchData(userInfoUrl);
+        
+        if (response.code !== 0 || !response.page?.list?.length) {
+            throw new Error(`未找到用户信息`);
+        }
+        return response.page.list[0];
+    };
+
+    const resetPassword = async (teamId) => {
+        const resetUrl = `https://${url}/api/user/info/resetPasswordWithTeamId?token=${token}&teamId=${teamId}`;
+        log(`重置密码请求: ${resetUrl}`);
+        const response = await fetchData(resetUrl);
+        
+        if (response.code !== 0) {
+            throw new Error(response.msg || "未知错误");
+        }
+        return teamId;
+    };
+
     try {
-        let teamId;
-        if (!targetTeamId) {
-            if (logOutput) {
-                ctx.logger.info(`开始处理用户 ${currentUserQQ} 的密码重置请求`);
-            }
-            const userInfoUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=7&tmpId=&tmpName=&teamId=&qq=${currentUserQQ}&state=0&teamRole=`;
-            if (logOutput) {
-                ctx.logger.info(`请求用户信息: ${userInfoUrl}`);
-            }
-            const userInfoResponse = await ctx.http.post(userInfoUrl);
-            if (logOutput) {
-                ctx.logger.info(`用户信息响应: ${JSON.stringify(userInfoResponse)}`);
-            }
-            if (userInfoResponse.code !== 0) {
-                return `获取用户信息失败: ${userInfoResponse.msg || "未知错误"}`;
-            }
-            const userList = userInfoResponse.page?.list || [];
-            if (userList.length === 0) {
-                return "未找到与该QQ号关联的用户信息";
-            }
-            teamId = userList[0].teamId;
-            if (!teamId) {
-                return "在平台中未找到您的信息，请联系管理员重置密码";
-            }
-            if (logOutput) {
-                ctx.logger.info(`找到用户 车队编号: ${teamId}`);
-            }
-        } else {
-            if (!isAdmin) {
-                return "您没有权限重置其他成员的密码，请联系管理员";
-            }
-            teamId = targetTeamId;
-            if (logOutput) {
-                ctx.logger.info(`管理员 ${currentUserQQ} 请求重置 车队编号 ${teamId} 的密码`);
-            }
-            const verifyUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=1&tmpId=&tmpName=&teamId=${teamId}&qq=&state=0&teamRole=`;
-            const verifyResponse = await ctx.http.post(verifyUrl);
-            if (verifyResponse.code !== 0 || !verifyResponse.page?.list?.length) {
-                return `未找到车队编号为 ${teamId} 的用户信息`;
-            }
-            const userInfo = verifyResponse.page.list[0];
-            if (logOutput) {
-                ctx.logger.info(`目标用户信息: ${userInfo.tmpName} (QQ: ${userInfo.qq})`);
-            }
-        }
-        const resetPasswordUrl = `https://${url}/api/user/info/resetPasswordWithTeamId?token=${token}&teamId=${teamId}`;
-        if (logOutput) {
-            ctx.logger.info(`请求重置密码: ${resetPasswordUrl}`);
-        }
-        const resetResponse = await ctx.http.post(resetPasswordUrl);
-        if (logOutput) {
-            ctx.logger.info(`重置密码响应: ${JSON.stringify(resetResponse)}`);
-        }
-        if (resetResponse.code === 0) {
-            if (targetTeamId) {
-                return `管理员操作：车队编号 ${teamId} 的密码重置成功！新密码已发送到用户邮箱。`;
+        let teamId, targetQQ;
+        if (targetTeamId?.startsWith("<at ")) {
+            if (!isAdmin) return "您没有权限重置其他用户的密码，请联系管理员";
+            const idStart = targetTeamId.indexOf('id="');
+            if (idStart === -1) return "获取QQ号错误，请使用车队编号重置";
+            
+            targetQQ = targetTeamId.substring(idStart + 4, targetTeamId.indexOf('"', idStart + 4));
+            if (!/^\d+$/.test(targetQQ)) return "获取QQ号错误，请使用车队编号重置";
+            
+            log(`管理员 ${currentUserQQ} 重置QQ: ${targetQQ} 密码`);
+            const userInfo = await getUserInfo({ qq: targetQQ });
+            teamId = userInfo.teamId;
+        } 
+        else {
+            if (isPrivateChat) {
+                if (!targetTeamId) {
+                    log(`用户 ${currentUserQQ} 发起密码重置`);
+                    const userInfo = await getUserInfo({ qq: currentUserQQ });
+                    teamId = userInfo.teamId;
+                    if (!teamId) return "未找到您的信息，请联系管理员";
+                } else {
+                    const userInfo = await getUserInfo({ teamId: targetTeamId });
+                    if (!isAdmin && userInfo.qq !== currentUserQQ) {
+                        return "您没有权限重置其他成员的密码，请联系管理员";
+                    }
+                    teamId = targetTeamId;
+                }
             } else {
-                return "密码重置成功！新密码已发送到您的邮箱，请查收。";
+                if (!isAdmin) return "您没有权限重置其他用户的密码，请联系管理员重置，或私聊机器人重置";
+                
+                teamId = targetTeamId;
+                log(`管理员 ${currentUserQQ} 重置车队: ${teamId} 密码`);
+                await getUserInfo({ teamId });
             }
-        } else {
-            return `密码重置失败: ${resetResponse.msg || "未知错误"}`;
         }
+        const resetTeamId = await resetPassword(teamId);
+        const isAdminOp = isAdmin && (targetTeamId || targetQQ);
+        return isAdminOp 
+            ? `管理员操作：车队编号 ${resetTeamId} 的密码重置成功！新密码已发送到用户邮箱。`
+            : "密码重置成功！新密码已发送到您的邮箱，请查收。";
+
     } catch (error) {
-        ctx.logger.error(`密码重置过程出错: ${error}`);
+        ctx.logger.error(`密码重置错误: ${error.message}`);
         if (error.response) {
             return `请求失败: ${error.response.status} ${error.response.statusText}`;
         } else if (error.code) {
             return `网络错误: ${error.code}`;
         } else {
-            return "系统错误，请稍后重试";
+            return error.message.includes("未找到") ? error.message : "系统错误，请稍后重试";
         }
     }
 };
