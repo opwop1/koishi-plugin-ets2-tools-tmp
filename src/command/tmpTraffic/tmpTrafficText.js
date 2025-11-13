@@ -7,7 +7,11 @@ const serverNameAlias = {
     's1': 'sim1',
     's2': 'sim2',
     'p': 'eupromods1',
-    'a': 'arc1'
+    'a': 'arc1',
+    'S1': 'sim1',
+    'S2': 'sim2',
+    'P': 'eupromods1',
+    'A': 'arc1'
 };
 /**
  * 路况程度转中文

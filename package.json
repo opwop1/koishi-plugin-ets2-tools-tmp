@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-ets2-tools-tmp",
-  "description": "欧卡2 tmp在线查询及车队平台查询",
-  "version": "0.0.6",
+  "description": "欧卡2 TMP在线查询、车队平台查询及活动提醒",
+  "version": "1.0.0",
   "contributors": [
     "opwop <slhp1013@qq.com>",
     "bot_actions <168329908@qq.com>"
@@ -21,7 +21,8 @@
     "plugin",
     "ETS2",
     "欧卡2",
-    "欧洲卡车模拟"
+    "欧洲卡车模拟",
+    "车队平台"
   ],
   "koishi": {
     "service": {

@@ -25,8 +25,8 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     // if (tmpId && isNaN(tmpId)) {
     //     return `请输入正确的玩家编号`;
     // }
-    if (tmpId.startsWith("<at ")) {
-        if (tmpId && tmpId.startsWith('<at ')) {
+    if (tmpId && tmpId.startsWith("<at ")) {
+        if (tmpId.startsWith('<at ')) {
             queryQQ = tmpId.replace('<at ', '');
         }
         let id = '';
