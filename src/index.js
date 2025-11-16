@@ -482,10 +482,13 @@ class ActivityService {
                 }
 
                 const timeDiff = activityStartTime.getTime() - now.getTime();
-                const minutesLeft = Math.floor(timeDiff / (1e3 * 60));
-                this.logger.debug(`活动 "${activity.themeName}" 剩余时间: ${minutesLeft} 分钟`);
+                const totalSecondsLeft = Math.floor(timeDiff / 1000);
+                const minutesLeft = Math.floor(totalSecondsLeft / 60);
+                const secondsLeft = totalSecondsLeft % 60;
+                this.logger.debug(`活动 "${activity.themeName}" 剩余时间: ${minutesLeft} 分 ${secondsLeft} 秒`);
 
-                if (minutesLeft <= 0 && minutesLeft > -1) {
+                // 活动开始提醒：只在活动开始时间点触发（允许30秒误差）
+                if (totalSecondsLeft >= -30 && totalSecondsLeft <= 0) {
                     const startReminderKey = `${activity.id}_started`;
                     if (!this.sentReminders.has(startReminderKey)) {
                         this.logger.debug(`触发活动开始提醒: ${activity.themeName}`);
@@ -495,9 +498,11 @@ class ActivityService {
                     }
                 }
 
-                if (minutesLeft < 0) continue;
+                // 活动前提醒：只在精确时间点触发（允许30秒误差）
+                if (totalSecondsLeft < 0) continue;
                 for (const reminderTime of this.cfg.mainActivityReminderTimes) {
-                    if (minutesLeft <= reminderTime && minutesLeft > reminderTime - 1) {
+                    const reminderTimeSeconds = reminderTime * 60;
+                    if (totalSecondsLeft <= reminderTimeSeconds && totalSecondsLeft > reminderTimeSeconds - 30) {
                         const reminderKey = `${activity.id}_${reminderTime}`;
                         if (!this.sentReminders.has(reminderKey)) {
                             this.logger.debug(`触发提醒: ${activity.themeName} - ${reminderTime} 分钟前`);
