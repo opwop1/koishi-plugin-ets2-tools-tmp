@@ -300,13 +300,15 @@ class ActivityService {
         const previousActivityCount = this.todayActivities.length;
         const previousTMPCount = this.todayTMPEvents.length;
         const previousReminderCount = this.sentReminders.size;
-        
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders.clear();
-        
-        this.logger.debug(`每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0`);
-        this.updateActivityData();
+        this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0`);
+        this.updateActivityData().then(() => {
+            this.logger.info(`[数据重置] 重置后数据更新完成: 活动${this.todayActivities.length}个, TMP${this.todayTMPEvents.length}个`);
+        }).catch(error => {
+            this.logger.error(`[数据重置] 重置后数据更新失败:`, error.message);
+        });
     }
 
     async updateActivityData() {
@@ -328,6 +330,8 @@ class ActivityService {
 
     async updateTodayActivities() {
         try {
+            this.todayActivities = [];
+            
             const protocol = this.cfg.adminUseHttps ? "https://" : "http://";
             const fullUrl = `${protocol}${this.cfg.adminApiUrl}/api/activity/info/list?token=${this.cfg.adminApiToken}&page=1&limit=50&themeName=`;
             this.logger.api(`请求车队平台API: ${fullUrl.replace(this.cfg.adminApiToken, "***")}`);
@@ -347,53 +351,88 @@ class ActivityService {
 
             if (response.code === 0 && response.data?.list) {
                 const today = new Date().toISOString().split("T")[0];
+                this.logger.debug(`[活动更新] 当前日期: ${today}`);
+                
                 const originalCount = response.data.list.length;
+                this.logger.debug(`[活动更新] API返回活动总数: ${originalCount}`);
+                if (this.cfg.debugMode && originalCount > 0) {
+                    const activityDates = response.data.list.map(a => `${a.themeName}: ${a.startTime?.split(" ")[0]}`);
+                    this.logger.debug(`[活动更新] 所有活动日期:`, activityDates);
+                }
+                
                 this.todayActivities = response.data.list.filter((activity) => {
                     const activityDate = activity.startTime?.split(" ")[0];
-                    return activityDate === today;
+                    const isToday = activityDate === today;
+                    if (!isToday && this.cfg.debugMode) {
+                        this.logger.debug(`[活动更新] 跳过非今日活动: ${activity.themeName}, 日期: ${activityDate}`);
+                    }
+                    return isToday;
                 });
-                this.logger.info(`从车队平台找到 ${this.todayActivities.length}/${originalCount} 个今日活动`);
+                
+                this.logger.info(`[活动更新] 从车队平台找到 ${this.todayActivities.length}/${originalCount} 个今日活动`);
+                if (this.cfg.debugMode && this.todayActivities.length > 0) {
+                    const todayActivityNames = this.todayActivities.map(a => `${a.themeName}: ${a.startTime}`);
+                    this.logger.debug(`[活动更新] 今日活动详情:`, todayActivityNames);
+                }
             } else {
-                this.logger.error(`车队平台API返回错误: ${response.msg || '未知错误'} (代码: ${response.code || '无'})`);
+                this.logger.error(`[活动更新] 车队平台API返回错误: ${response.msg || '未知错误'} (代码: ${response.code || '无'})`);
                 this.todayActivities = [];
             }
         } catch (error) {
-            this.logger.error("获取车队平台活动列表失败:", error.message);
+            this.logger.error("[活动更新] 获取车队平台活动列表失败:", error.message);
             this.todayActivities = [];
         }
     }
 
     async updateTodayTMPEvents() {
         try {
+            this.todayTMPEvents = [];
+            
             if (!this.cfg.adminVtcId) {
-                this.logger.warn("TMP API请求失败：未配置adminVtcId");
-                this.todayTMPEvents = [];
+                this.logger.warn("[TMP活动更新] TMP API请求失败：未配置adminVtcId");
                 return;
             }
             
             const tmpApiUrl = `https://api.truckersmp.com/v2/vtc/${this.cfg.adminVtcId}/events/attending/`;
-            this.logger.api(`请求TMP API: ${tmpApiUrl}`);
+            this.logger.api(`[TMP活动更新] 请求TMP API: ${tmpApiUrl}`);
 
             const startTime = Date.now();
             const response = await this.ctx.http.get(tmpApiUrl, { timeout: 10000 });
             const duration = Date.now() - startTime;
-            this.logger.api(`TMP API响应耗时: ${duration}ms, 错误状态: ${response.error}`);
+            this.logger.api(`[TMP活动更新] TMP API响应耗时: ${duration}ms, 错误状态: ${response.error}`);
 
             if (!response.error && Array.isArray(response.response)) {
                 const today = new Date().toISOString().split("T")[0];
+                this.logger.debug(`[TMP活动更新] 当前日期: ${today}`);
+                
                 const originalCount = response.response.length;
+                this.logger.debug(`[TMP活动更新] API返回活动总数: ${originalCount}`);
+                
+                if (this.cfg.debugMode && originalCount > 0) {
+                    const eventDates = response.response.map(e => `${e.name}: ${e.start_at?.split(" ")[0]}`);
+                    this.logger.debug(`[TMP活动更新] 所有活动日期:`, eventDates);
+                }
+                
                 this.todayTMPEvents = response.response.filter((event) => {
                     const eventDate = event.start_at?.split(" ")[0];
-                    return eventDate === today;
+                    const isToday = eventDate === today;
+                    if (!isToday && this.cfg.debugMode) {
+                        this.logger.debug(`[TMP活动更新] 跳过非今日活动: ${event.name}, 日期: ${eventDate}`);
+                    }
+                    return isToday;
                 });
-                this.logger.info(`从TMP找到 ${this.todayTMPEvents.length}/${originalCount} 个今日活动`);
+                
+                this.logger.info(`[TMP活动更新] 从TMP找到 ${this.todayTMPEvents.length}/${originalCount} 个今日活动`);
+                
+                if (this.cfg.debugMode && this.todayTMPEvents.length > 0) {
+                    const todayEventNames = this.todayTMPEvents.map(e => `${e.name}: ${e.start_at}`);
+                    this.logger.debug(`[TMP活动更新] 今日活动详情:`, todayEventNames);
+                }
             } else {
-                this.logger.error(`TMP API返回错误: ${response.message || '未知错误'}`);
-                this.todayTMPEvents = [];
+                this.logger.error(`[TMP活动更新] TMP API返回错误: ${response.message || '未知错误'}`);
             }
         } catch (error) {
-            this.logger.error("获取TMP活动失败:", error.message);
-            this.todayTMPEvents = [];
+            this.logger.error("[TMP活动更新] 获取TMP活动失败:", error.message);
         }
     }
 
@@ -424,11 +463,18 @@ class ActivityService {
 
     async checkAndSendActivityReminders() {
         const now = new Date();
+        const today = now.toISOString().split("T")[0];
         let remindersSent = 0;
-        this.logger.debug(`检查 ${this.todayActivities.length} 个活动的提醒时间`);
+        this.logger.debug(`检查 ${this.todayActivities.length} 个活动的提醒时间，当前日期: ${today}`);
 
         for (const activity of this.todayActivities) {
             try {
+                const activityDate = activity.startTime?.split(" ")[0];
+                if (activityDate !== today) {
+                    this.logger.debug(`跳过非今日活动 "${activity.themeName}"，活动日期: ${activityDate}，当前日期: ${today}`);
+                    continue;
+                }
+
                 const activityStartTime = new Date(activity.startTime);
                 if (isNaN(activityStartTime.getTime())) {
                     this.logger.warn(`活动 "${activity.themeName}" 开始时间格式错误，跳过提醒`);
