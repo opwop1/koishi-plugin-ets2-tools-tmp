@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <link href="./package/leaflet/leaflet.min.css" rel="stylesheet">
+  <script src="./package/leaflet/leaflet.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+    }
+    * {
+      font-family: "微软雅黑", serif;
+    }
+    #container {
+      width: 500px;
+      height: 320px;
+      position: relative;
+    }
+    .map {
+      width: 100%;
+      height: 100%;
+      background-color: #5d5d5d;
+    }
+    .user-info-box {
+      width: 100%;
+      height: 76px;
+      position: absolute;
+      bottom: 0;
+      z-index: 999;
+      background-color: rgba(100, 100, 100, 0.4);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 0 14px;
+      box-sizing: border-box;
+    }
+    .avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 4px;
+    }
+    .user {
+      height: 56px;
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .user {
+      font-size: 16px;
+      color: #eeeeee;
+      margin-left: 10px;
+      box-sizing: border-box;
+    }
+    .user .server-name-box {
+      display: flex;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .user .username {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .user .server-name-box span {
+      display: inline-block;
+      max-width: 136px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 4px;
+      box-sizing: border-box;
+    }
+    .location-box {
+      flex-grow: 1;
+      color: #eeeeee;
+      font-size: 16px;
+      height: 56px;
+      box-sizing: border-box;
+      border-right: 4px solid #54d354;
+      text-align: right;
+      padding-right: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .location-box>* {
+      width: 174px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="map" class="map"></div>
+    <div class="user-info-box">
+      <img class="avatar" src="https://static.truckersmp.com/avatarsN/small/defaultavatar.png"/>
+      <div class="user">
+        <div class="username">...</div>
+        <div class="server-name-box" style="margin-top: 4px">
+          <span class="server-name">...</span>游戏中
+        </div>
+      </div>
+      <div class="location-box">
+        <div class="country">...</div>
+        <div class="real-name" style="margin-top: 4px">...</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let mapConfig = {
+      ets: {
+        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
+        multipliers: {
+          x: 71282,
+          y: 56532
+        },
+        breakpoints: {
+          uk: {
+            x: -31056.8,
+            y: -5832.867
+          }
+        },
+        bounds: {
+          y: 131072,
+          x: 131072
+        },
+        maxZoom: 8,
+        minZoom: 2,
+        // 游戏地转地图坐标
+        calculateMapCoordinate (x, y) {
+          return [
+            x / 1.325928 + mapConfig.ets.multipliers.x,
+            y / 1.325928 + mapConfig.ets.multipliers.y
+          ];
+        }
+      },
+      promods: {
+        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/promods/05102019/{z}/{x}/{y}.png',
+        multipliers: {
+          x: 51953,
+          y: 76024
+        },
+        breakpoints: {
+          uk: {
+            x: -31056.8,
+            y: -5832.867
+          }
+        },
+        bounds: {
+          y: 131072,
+          x: 131072
+        },
+        maxZoom: 8,
+        minZoom: 2,
+        // 游戏地转地图坐标
+        calculateMapCoordinate (x, y) {
+          return [
+            x / 2.598541 + mapConfig.promods.multipliers.x,
+            y / 2.598541 + mapConfig.promods.multipliers.y
+          ]
+        }
+      }
+    }
+
+    // 定义地图
+    let map = L.map('map', {
+      attributionControl: false,
+      crs: L.CRS.Simple,
+      zoomControl: false
+    });
+
+    function setData(data) {
+      // 边界
+      let bounds = L.latLngBounds(
+        map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
+        map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
+      );
+
+      // 瓦片地图
+      L.tileLayer(mapConfig[data.mapType].tileUrl, {
+        minZoom: 2,
+        maxZoom: 10,
+        maxNativeZoom: 8,
+        tileSize: 512,
+        bounds: bounds,
+        reuseTiles: true
+      }).addTo(map);
+      map.setMaxBounds(
+        new L.LatLngBounds(
+          map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
+          map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
+        )
+      );
+
+      document.getElementsByClassName('avatar')[0].src = data.avatar
+      document.getElementsByClassName('username')[0].innerText = data.username
+      document.getElementsByClassName('server-name')[0].innerText = data.serverName
+      document.getElementsByClassName('country')[0].innerText = data.country
+      document.getElementsByClassName('real-name')[0].innerText = data.realName
+
+      for (let player of data.playerList) {
+        L.circleMarker(map.unproject(mapConfig[data.mapType].calculateMapCoordinate(player.axisX, player.axisY), 8), {
+          color: '#2f2f2f',       // 标记点边框颜色
+          weight: 2,              // 标记点边框大小
+          fillColor: data.currentPlayerId.toString() === player.tmpId.toString() ? '#1cb715' : '#158cfb',   // 标记点填充颜色
+          fillOpacity: 1,         // 标记点填充不透明度（0到1之间的值）
+          radius: 5,              // 标记点半径（以像素为单位）
+          zIndex: data.currentPlayerId.toString() === player.tmpId.toString() ? 1000 : undefined
+        }).addTo(map);
+      }
+
+      // 移动地图到坐标，视角稍微向上移动
+      map.setView(map.unproject(mapConfig[data.mapType].calculateMapCoordinate(data.centerX, data.centerY + 80), 8), 7);
+    }
+  </script>
+</body>
+</html>

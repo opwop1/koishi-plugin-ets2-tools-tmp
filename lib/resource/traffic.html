@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <link href="./package/leaflet/leaflet.min.css" rel="stylesheet">
+  <script src="./package/leaflet/leaflet.min.js"></script>
+  <script src="./package/leaflet/heatmap.min.js"></script>
+  <script src="./package/leaflet/leaflet-heatmap.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+    }
+    * {
+      font-family: "微软雅黑", serif;
+    }
+    #container {
+      width: 1000px;
+      position: relative;
+    }
+    .map {
+      width: 100%;
+      height: 900px;
+      background-color: #4b4b4b;
+    }
+    .traffic-box {
+      //position: absolute;
+      //bottom: 0;
+      //left: 0;
+      //z-index: 9999999;
+      width: 100%;
+      backdrop-filter: blur(3px);
+      background-color: #4b4b4b;
+      padding: 12px 16px;
+      box-sizing: border-box;
+      overflow-y: hidden;
+    }
+    .traffic-item {
+      color: #ffffff;
+      width: 33.3333%;
+      float: left;
+      margin-top: 8px;
+      font-size: 14px;
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      box-sizing: border-box;
+      padding: 0 10px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+    }
+    .traffic-item:nth-child(-n+3) {
+      margin-top: 0;
+    }
+    .traffic-item:last-child, .traffic-item:nth-child(3n) {
+      border-right: 0;
+    }
+    .traffic-item .region-info {
+      display: inline-block;
+      width: 72%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .traffic-item .player-count {
+      display: inline-block;
+      width: 16%;
+      text-align: center;
+    }
+    .traffic-item .traffic-status {
+      display: inline-block;
+      width: 12%;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="map" class="map"></div>
+    <div class="traffic-box"></div>
+  </div>
+  <script>
+    let mapConfig = {
+      ets: {
+        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
+        multipliers: {
+          x: 71282,
+          y: 56532
+        },
+        breakpoints: {
+          uk: {
+            x: -31056.8,
+            y: -5832.867
+          }
+        },
+        bounds: {
+          y: 131072,
+          x: 131072
+        },
+        maxZoom: 8,
+        minZoom: 2,
+        // 游戏地转地图坐标
+        calculateMapCoordinate (x, y) {
+          return [
+            x / 1.325928 + mapConfig.ets.multipliers.x,
+            y / 1.325928 + mapConfig.ets.multipliers.y
+          ];
+        }
+      },
+      promods: {
+        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/promods/05102019/{z}/{x}/{y}.png',
+        multipliers: {
+          x: 51953,
+          y: 76024
+        },
+        breakpoints: {
+          uk: {
+            x: -31056.8,
+            y: -5832.867
+          }
+        },
+        bounds: {
+          y: 131072,
+          x: 131072
+        },
+        maxZoom: 8,
+        minZoom: 2,
+        // 游戏地转地图坐标
+        calculateMapCoordinate (x, y) {
+          return [
+            x / 2.598541 + mapConfig.promods.multipliers.x,
+            y / 2.598541 + mapConfig.promods.multipliers.y
+          ]
+        }
+      }
+    }
+
+    // 定义地图
+    let map = L.map('map', {
+      attributionControl: false,
+      crs: L.CRS.Simple,
+      zoomControl: false
+    });
+
+    function setData(data) {
+      // 边界
+      let bounds = L.latLngBounds(
+        map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
+        map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
+      );
+
+      // 瓦片地图
+      L.tileLayer(mapConfig[data.mapType].tileUrl, {
+        minZoom: 1,
+        maxZoom: 8,
+        tileSize: 512,
+        bounds: bounds,
+        reuseTiles: true
+      }).addTo(map);
+      map.setMaxBounds(
+        new L.LatLngBounds(
+          map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
+          map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
+        )
+      );
+
+      // 展示地图全貌
+      map.fitBounds(bounds)
+
+      // 热力图
+      let heatmapLayer = new HeatmapOverlay({
+        radius: 3,
+        maxOpacity: 0.8,
+        scaleRadius: true,
+        useLocalExtrema: true,
+        latField: "lat",
+        lngField: "lng",
+        valueField: "count"
+      });
+      map.addLayer(heatmapLayer);
+      let heatmapData = []
+      for (const arrayElement of data.playerCoordinateList) {
+        let unprojected = map.unproject(mapConfig[data.mapType].calculateMapCoordinate(arrayElement[0], arrayElement[1]), 8);
+        heatmapData.push({ lat: unprojected.lat, lng: unprojected.lng, count: 1 });
+      }
+      heatmapLayer.setData({
+        min: 1,
+        max: 5000,
+        data: heatmapData
+      })
+
+      // 展示热门地区路况状态
+      for (const traffic of data.trafficList) {
+        document.getElementsByClassName('traffic-box')[0].insertAdjacentHTML('beforeend', `
+          <div class="traffic-item">
+            <span class="region-info"><strong>${traffic.country}</strong> ${traffic.province}</span><span class="player-count">${traffic.playerCount}人</span><span class="traffic-status" style="color: ${traffic.severity.color}">${traffic.severity.text}</span>
+          </div>
+        `);
+      }
+    }
+  </script>
+</body>
+</html>

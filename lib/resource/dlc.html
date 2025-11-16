@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DLC</title>
+  <style>
+    #dlc-info-container {
+      width: 600px;
+      background-color: #222d33;
+      padding: 14px;
+    }
+
+    .dlc-box {
+      display: flex;
+      flex-direction: row;
+      box-sizing: border-box;
+      padding: 12px;
+      margin-top: 12px;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    .dlc-box:nth-of-type(1) {
+      margin-top: 0;
+    }
+
+    .dlc-box .header-image {
+      width: 210px;
+      display: inline-block;
+    }
+
+    .dlc-box .dlc-info {
+      flex: 1;
+      width: 0;
+      //border: 1px solid red;
+      box-sizing: border-box;
+      padding: 2px 12px;
+    }
+    .dlc-info .name {
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dlc-info .desc {
+      color: #e5e5e5;
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .dlc-info .price-box {
+      margin-top: 8px;
+    }
+
+    .dlc-info .price-box span {
+      display: inline-block;
+      color: #BEEE11;
+      font-size: 16px;
+    }
+    .dlc-info .price-box .discount-price {
+      color: #cbcbcb;
+      text-decoration: line-through;
+    }
+    .dlc-info .price-box .discount {
+      font-size: 14px;
+      color: #BEEE11;
+      background-color: #4c6b22;
+      padding: 2px 6px;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="dlc-info-container">
+  </div>
+
+  <script>
+    function setData(dlcList) {
+      // 遍历渲染DLC列表
+      for (let dlc of dlcList) {
+        let dom = document.createElement(`div`);
+        dom.className = 'dlc-box';
+        dom.style.backgroundImage = `url('${dlc.backgroundImageUrl}')`;
+
+        let priceDiscountDom = ''
+        if (dlc.discount > 0) {
+          priceDiscountDom = `
+          <span class="discount-price">￥${Math.ceil(dlc.originalPrice / 100)}</span>
+          <span class="discount">-${dlc.discount}%</span>
+        `;
+        }
+
+        dom.innerHTML = `
+          <img class="header-image" src="${dlc.headerImageUrl}"/>
+          <div class="dlc-info">
+            <div class="name">${dlc.name}</div>
+            <div class="desc">${dlc.desc}</div>
+            <div class="price-box">
+              <span>￥${Math.ceil(dlc.finalPrice / 100)}</span>
+              ${priceDiscountDom}
+            </div>
+          </div>
+        `;
+
+        document.querySelector('#dlc-info-container').appendChild(dom);
+      }
+    }
+  </script>
+</body>
+</html>

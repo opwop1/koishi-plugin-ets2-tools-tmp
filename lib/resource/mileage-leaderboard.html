@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mileage Leaderboard</title>
+  <style>
+    @font-face {
+      font-family: 'segui-emj';
+      src: url('./package/SEGUIEMJ.TTF');
+      font-weight: normal;
+      font-style: normal;
+    }
+    body {
+      font-family: 'segui-emj', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+    }
+
+    #container {
+      width: 340px;
+      background: linear-gradient(135deg, #1f2f54, #0f2c2a);
+      overflow: hidden;
+      padding-bottom: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .header {
+      height: 45px;
+      background-color: rgba(0, 0, 0, .1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      box-shadow: 0 0 16px rgba(0, 0, 0, .4);
+    }
+
+    .header .title {
+      color: #b0c7ff;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .leaderboard-container {
+      padding: 12px 16px 0 16px;
+    }
+
+    .leaderboard-item {
+      background-color: rgba(0, 0, 0, 0.25);
+      margin-bottom: 4px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .leaderboard-item.top3 {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
+      border-color: rgba(255, 215, 0, 0.3);
+      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+    }
+
+    .leaderboard-item.current-player {
+      background: linear-gradient(135deg, rgba(92, 227, 92, 0.3), rgba(92, 227, 92, 0.15));
+      border: 1px solid rgba(92, 227, 92, 0.6);
+      box-shadow: 0 2px 10px rgba(92, 227, 92, 0.3);
+    }
+
+    .item-content {
+      display: flex;
+      align-items: center;
+      padding: 8px 14px;
+    }
+
+    .rank {
+      width: 32px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .current-player .rank {
+      min-width: 48px;
+      flex-shrink: 0;
+    }
+
+    .rank.top1 {
+      color: #ffd700;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    }
+
+    .rank.top2 {
+      color: #c0c0c0;
+      text-shadow: 0 0 6px rgba(192, 192, 192, 0.5);
+    }
+
+    .rank.top3 {
+      color: #cd7f32;
+      text-shadow: 0 0 6px rgba(205, 127, 50, 0.5);
+    }
+
+    .player-info {
+      flex: 1;
+      padding: 0 10px;
+      min-width: 0;
+    }
+
+    .player-name {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      max-width: 160px;
+    }
+
+    .current-player .player-name {
+      max-width: 144px;
+    }
+
+
+    .mileage-value {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      min-width: 65px;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      margin: 12px 16px;
+    }
+
+    .current-player-container {
+      padding: 0 16px;
+    }
+
+    .current-player-title {
+      color: #aaaaaa;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .footer-note {
+      color: #666666;
+      font-size: 10px;
+      text-align: center;
+      margin-top: 12px;
+      padding: 0 16px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="header">
+      <div class="title">🚗 行驶里程排行榜</div>
+    </div>
+
+    <div class="leaderboard-container">
+      <!-- 排行榜前10名 -->
+      <div id="top-rankings"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="current-player-container">
+      <div class="current-player-title">你的排名</div>
+      <div id="current-player"></div>
+    </div>
+
+    <div class="footer-note" id="footer-note">
+      * 数据统计说明
+    </div>
+  </div>
+
+  <script>
+    function createLeaderboardItem(rank, playerName, mileage, isCurrentPlayer = false, isTop3 = false) {
+      const item = document.createElement('div');
+      item.className = `leaderboard-item${isTop3 ? ' top3' : ''}${isCurrentPlayer ? ' current-player' : ''}`;
+
+      let rankClass = '';
+      if (rank === 1) rankClass = 'top1';
+      else if (rank === 2) rankClass = 'top2';
+      else if (rank === 3) rankClass = 'top3';
+
+      item.innerHTML = `
+        <div class="item-content">
+          <div class="rank ${rankClass}">#${rank}</div>
+          <div class="player-info">
+            <div class="player-name">${playerName}</div>
+          </div>
+          <div class="mileage-value">${formatMileage(mileage)}</div>
+        </div>
+      `;
+
+      return item;
+    }
+
+    function formatMileage(mileage) {
+      const meters = parseInt(mileage);
+      if (isNaN(meters) || meters < 0) return '0 km';
+
+      const km = meters / 1000;
+
+      if (km >= 1000000) {
+        const value = (km / 1000000).toFixed(2);
+        return value.endsWith('.00') ? Math.floor(km / 1000000) + 'M km' : value + 'M km';
+      } else if (km >= 1000) {
+        const value = (km / 1000).toFixed(2);
+        return value.endsWith('.00') ? Math.floor(km / 1000) + 'K km' : value + 'K km';
+      } else if (km >= 1) {
+        return Math.floor(km).toLocaleString() + ' km';
+      } else {
+        return meters.toLocaleString() + ' m';
+      }
+    }
+
+    // 新增：处理来自后端的动态数据
+    function setData(apiData) {
+      if (!apiData) {
+        console.error('数据无效');
+        return;
+      }
+
+      // 设置标题和底部脚注
+      const titleElement = document.querySelector('.header .title');
+      const footerElement = document.getElementById('footer-note');
+
+      if (titleElement) {
+        const titles = {
+          1: '- 总行驶里程排行榜 -',
+          2: '- 今日行驶里程排行榜 -'
+        };
+        const footerNotes = {
+          1: '* 数据自 2025年8月23日 20:00 开始统计',
+          2: '* 每日 0:00 重置统计'
+        };
+
+        titleElement.textContent = titles[apiData.rankingType] || '🚗 行驶里程排行榜';
+        if (footerElement) {
+          footerElement.textContent = footerNotes[apiData.rankingType] || '* 数据统计说明';
+        }
+      }
+
+      const topRankings = document.getElementById('top-rankings');
+      const currentPlayerContainer = document.getElementById('current-player');
+
+      // 清空现有内容
+      topRankings.innerHTML = '';
+      currentPlayerContainer.innerHTML = '';
+
+      // 渲染前10名排行榜
+      if (apiData.mileageRankingList && Array.isArray(apiData.mileageRankingList)) {
+        apiData.mileageRankingList.slice(0, 10).forEach((player) => {
+          if (player && player.tmpName && typeof player.distance !== 'undefined' && typeof player.ranking !== 'undefined') {
+            const isTop3 = player.ranking <= 3;
+            const item = createLeaderboardItem(player.ranking, player.tmpName, player.distance, false, isTop3);
+            topRankings.appendChild(item);
+          }
+        });
+      }
+
+      // 渲染当前玩家排名
+      if (apiData.playerMileageRanking && apiData.playerMileageRanking.tmpName && typeof apiData.playerMileageRanking.ranking !== 'undefined') {
+        const currentItem = createLeaderboardItem(
+          apiData.playerMileageRanking.ranking,
+          apiData.playerMileageRanking.tmpName,
+          apiData.playerMileageRanking.distance,
+          true,
+          false
+        );
+        currentPlayerContainer.appendChild(currentItem);
+      } else {
+        // 如果没有当前玩家数据，隐藏该部分
+        const divider = document.querySelector('.divider');
+        const currentPlayerSection = document.querySelector('.current-player-container');
+        if (divider) divider.style.display = 'none';
+        if (currentPlayerSection) currentPlayerSection.style.display = 'none';
+      }
+    }
+
+    function init(data) {
+      if (!data) {
+        console.error('数据无效');
+        return;
+      }
+
+      const topRankings = document.getElementById('top-rankings');
+      const currentPlayerContainer = document.getElementById('current-player');
+
+      // 清空现有内容
+      topRankings.innerHTML = '';
+      currentPlayerContainer.innerHTML = '';
+
+      // 渲染前10名排行榜
+      if (data.topRankings && Array.isArray(data.topRankings)) {
+        data.topRankings.slice(0, 10).forEach((player, index) => {
+          if (player && player.name && typeof player.mileage !== 'undefined') {
+            const rank = index + 1;
+            const isTop3 = rank <= 3;
+            const item = createLeaderboardItem(rank, player.name, player.mileage, false, isTop3);
+            topRankings.appendChild(item);
+          }
+        });
+      }
+
+      // 渲染当前玩家排名
+      if (data.currentPlayer && data.currentPlayer.name && typeof data.currentPlayer.rank !== 'undefined') {
+        const currentItem = createLeaderboardItem(
+          data.currentPlayer.rank,
+          data.currentPlayer.name,
+          data.currentPlayer.mileage,
+          true,
+          false
+        );
+        currentPlayerContainer.appendChild(currentItem);
+      } else {
+        // 如果没有当前玩家数据，隐藏该部分
+        const divider = document.querySelector('.divider');
+        const currentPlayerSection = document.querySelector('.current-player-container');
+        if (divider) divider.style.display = 'none';
+        if (currentPlayerSection) currentPlayerSection.style.display = 'none';
+      }
+    }
+
+    // 示例数据 - 实际使用时将被外部数据替换
+    const sampleData = {
+      topRankings: [
+        { name: "Afo780", mileage: 347167 },
+        { name: "lαdу ναlєяijα", mileage: 331177 },
+        { name: "Stefan Z", mileage: 330658 },
+        { name: "YorkshireSlacka", mileage: 328871 },
+        { name: "Sun      [PL]", mileage: 327208 },
+        { name: "joewales96 LAG", mileage: 324952 },
+        { name: "Turbo_Express", mileage: 320211 },
+        { name: "gapcio9933", mileage: 319599 },
+        { name: "R8 anderson", mileage: 319004 },
+        { name: "lorddarki85", mileage: 317788 }
+      ],
+      currentPlayer: {
+        rank: 3365,
+        name: "ZyRoX Drum",
+        mileage: 59515
+      }
+    };
+
+    // 页面加载时初始化示例数据
+    document.addEventListener('DOMContentLoaded', function() {
+      init(sampleData);
+    });
+  </script>
+</body>
+</html>
