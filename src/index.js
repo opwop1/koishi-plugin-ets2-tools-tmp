@@ -228,7 +228,13 @@ class ActivityService {
     }
 
     setupDailyTasks() {
-        this.logger.timing("开始设置每日定时任务");
+        const now = new Date();
+        const localTime = now.toLocaleString();
+        const localDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+        const utcDate = now.toISOString().split("T")[0];
+        
+        this.logger.timing(`开始设置每日定时任务，本地时间: ${localTime}, 本地日期: ${localDate}, UTC日期: ${utcDate}`);
+        
         const resetHour = 2;
         const resetMinute = 0;
         const resetDelay = this.getNextTime(resetHour, resetMinute);
@@ -243,6 +249,7 @@ class ActivityService {
         }, resetDelay);
         this.timers.push(resetTimer);
         this.logger.timing(`设置数据重置定时器: ${resetHour}:${resetMinute.toString().padStart(2, "0")}, 延迟: ${resetDelay}ms`);
+        
         this.cfg.adminCheckTimes.forEach((timeStr, index) => {
             const [hours, minutes] = timeStr.split(":").map(Number);
             this.setupTimer(hours, minutes, () => {
@@ -297,13 +304,24 @@ class ActivityService {
     }
 
     resetDailyData() {
+        const now = new Date();
+        const localTime = now.toLocaleString();
+        const localDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+        const utcDate = now.toISOString().split("T")[0];
+        
         const previousActivityCount = this.todayActivities.length;
         const previousTMPCount = this.todayTMPEvents.length;
         const previousReminderCount = this.sentReminders.size;
+        
+        this.logger.info(`[数据重置] 开始重置数据，本地时间: ${localTime}, 本地日期: ${localDate}, UTC日期: ${utcDate}`);
+        this.logger.info(`[数据重置] 重置前数据: 活动${previousActivityCount}个, TMP${previousTMPCount}个, 提醒${previousReminderCount}个`);
+        
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders.clear();
+        
         this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0`);
+        
         this.updateActivityData().then(() => {
             this.logger.info(`[数据重置] 重置后数据更新完成: 活动${this.todayActivities.length}个, TMP${this.todayTMPEvents.length}个`);
         }).catch(error => {
@@ -350,8 +368,9 @@ class ActivityService {
             }
 
             if (response.code === 0 && response.data?.list) {
-                const today = new Date().toISOString().split("T")[0];
-                this.logger.debug(`[活动更新] 当前日期: ${today}`);
+                const now = new Date();
+                const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+                this.logger.debug(`[活动更新] 当前本地日期: ${today}, UTC日期: ${new Date().toISOString().split("T")[0]}`);
                 
                 const originalCount = response.data.list.length;
                 this.logger.debug(`[活动更新] API返回活动总数: ${originalCount}`);
@@ -364,7 +383,7 @@ class ActivityService {
                     const activityDate = activity.startTime?.split(" ")[0];
                     const isToday = activityDate === today;
                     if (!isToday && this.cfg.debugMode) {
-                        this.logger.debug(`[活动更新] 跳过非今日活动: ${activity.themeName}, 日期: ${activityDate}`);
+                        this.logger.debug(`[活动更新] 跳过非今日活动: ${activity.themeName}, 日期: ${activityDate}, 当前日期: ${today}`);
                     }
                     return isToday;
                 });
@@ -402,8 +421,9 @@ class ActivityService {
             this.logger.api(`[TMP活动更新] TMP API响应耗时: ${duration}ms, 错误状态: ${response.error}`);
 
             if (!response.error && Array.isArray(response.response)) {
-                const today = new Date().toISOString().split("T")[0];
-                this.logger.debug(`[TMP活动更新] 当前日期: ${today}`);
+                const now = new Date();
+                const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+                this.logger.debug(`[TMP活动更新] 当前本地日期: ${today}, UTC日期: ${new Date().toISOString().split("T")[0]}`);
                 
                 const originalCount = response.response.length;
                 this.logger.debug(`[TMP活动更新] API返回活动总数: ${originalCount}`);
@@ -417,7 +437,7 @@ class ActivityService {
                     const eventDate = event.start_at?.split(" ")[0];
                     const isToday = eventDate === today;
                     if (!isToday && this.cfg.debugMode) {
-                        this.logger.debug(`[TMP活动更新] 跳过非今日活动: ${event.name}, 日期: ${eventDate}`);
+                        this.logger.debug(`[TMP活动更新] 跳过非今日活动: ${event.name}, 日期: ${eventDate}, 当前日期: ${today}`);
                     }
                     return isToday;
                 });
@@ -463,15 +483,16 @@ class ActivityService {
 
     async checkAndSendActivityReminders() {
         const now = new Date();
-        const today = now.toISOString().split("T")[0];
+        const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+        const todayUTC = now.toISOString().split("T")[0];
         let remindersSent = 0;
-        this.logger.debug(`检查 ${this.todayActivities.length} 个活动的提醒时间，当前日期: ${today}`);
+        this.logger.debug(`检查 ${this.todayActivities.length} 个活动的提醒时间，当前本地日期: ${today}, UTC日期: ${todayUTC}`);
 
         for (const activity of this.todayActivities) {
             try {
                 const activityDate = activity.startTime?.split(" ")[0];
                 if (activityDate !== today) {
-                    this.logger.debug(`跳过非今日活动 "${activity.themeName}"，活动日期: ${activityDate}，当前日期: ${today}`);
+                    this.logger.debug(`跳过非今日活动 "${activity.themeName}"，活动日期: ${activityDate}，当前本地日期: ${today}`);
                     continue;
                 }
 
@@ -486,8 +507,6 @@ class ActivityService {
                 const minutesLeft = Math.floor(totalSecondsLeft / 60);
                 const secondsLeft = totalSecondsLeft % 60;
                 this.logger.debug(`活动 "${activity.themeName}" 剩余时间: ${minutesLeft} 分 ${secondsLeft} 秒`);
-
-                // 活动开始提醒：只在活动开始时间点触发（允许30秒误差）
                 if (totalSecondsLeft >= -30 && totalSecondsLeft <= 0) {
                     const startReminderKey = `${activity.id}_started`;
                     if (!this.sentReminders.has(startReminderKey)) {
@@ -497,8 +516,6 @@ class ActivityService {
                         remindersSent++;
                     }
                 }
-
-                // 活动前提醒：只在精确时间点触发（允许30秒误差）
                 if (totalSecondsLeft < 0) continue;
                 for (const reminderTime of this.cfg.mainActivityReminderTimes) {
                     const reminderTimeSeconds = reminderTime * 60;
