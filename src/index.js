@@ -120,6 +120,11 @@ exports.Config = koishi_1.Schema.intersect([
         adminProfileNotUploadedMessage: koishi_1.Schema.string().description("活动档未上传时的消息").default("今日活动档还没做，请负责的管理注意！")
     }).description("活动查询 - 管理群消息配置"),
     koishi_1.Schema.object({
+        adminNoActivityNotification: koishi_1.Schema.boolean().description("启用今日无活动通知").default(false),
+        adminNoActivityTime: koishi_1.Schema.string().description("今日无活动通知发送时间（HH:mm格式）").default("09:00"),
+        adminNoActivityMessage: koishi_1.Schema.string().description("今日无活动通知消息").default("今日没活动")
+    }).description("活动查询 - 无活动通知配置"),
+    koishi_1.Schema.object({
         mainGroups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("主群群号列表").default([]),
         mainActivityReminderMessage: koishi_1.Schema.string().description("活动提醒消息模板，支持变量：{name}, {server}, {startingPoint}, {terminalPoint}, {distance}, {banner}, {timeLeft}").default("活动 {name} 还有 {timeLeft} 分钟就要开始啦!\n服务器: {server}\n起点: {startingPoint}\n终点: {terminalPoint}\n距离: {distance}KM"),
         mainActivityStartReminderMessage: koishi_1.Schema.string().description("活动开始提醒消息模板，支持变量：{name}, {server}, {startingPoint}, {terminalPoint}, {distance}, {banner}").default("活动 {name} 现在开始集合啦!\n服务器: {server}\n起点: {startingPoint}\n终点: {terminalPoint}\n距离: {distance}KM\n活动将于20:30分开始！"),
@@ -141,6 +146,7 @@ class ActivityService {
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders = new Set();
+        this.sentNoActivityNotification = false;
         this.timers = [];
         this.logger = this.initLogger();
     }
@@ -207,6 +213,20 @@ class ActivityService {
                 this.resetDailyData();
                 return "✅ 今日活动数据已重置完成！";
             });
+
+        this.ctx.command("测试无活动通知", "手动测试发送无活动通知")
+            .action(async () => {
+                this.logger.debug("手动执行无活动通知测试命令");
+                await this.checkAndSendNoActivityNotification(true);
+                return "✅ 无活动通知测试完成！";
+            });
+
+        this.ctx.command("检查活动状态变化", "手动检查活动状态变化")
+            .action(async () => {
+                this.logger.debug("手动执行活动状态变化检查命令");
+                await this.checkActivityStatusChange();
+                return "✅ 活动状态变化检查完成！";
+            });
     }
 
     getDebugInfo() {
@@ -222,6 +242,7 @@ class ActivityService {
                `• TMP活动: ${this.todayTMPEvents.length} 个\n` +
                `• 已发送提醒: ${this.sentReminders.size} 个\n` +
                `  - 活动开始提醒: ${startRemindersSent} 个\n` +
+               `• 无活动通知: ${this.sentNoActivityNotification ? "已发送" : "未发送"}\n` +
                `• 活跃定时器: ${this.timers.length} 个\n` +
                `• 调试模式: ${this.cfg.debugMode ? "✅ 开启" : "❌ 关闭"}\n` +
                `• 日志选项: API=${this.cfg.logApiResponses ? "✅" : "❌"}, 定时=${this.cfg.logTimingDetails ? "✅" : "❌"}, 匹配=${this.cfg.logActivityMatching ? "✅" : "❌"}, 消息=${this.cfg.logMessageSending ? "✅" : "❌"}`;
@@ -252,19 +273,28 @@ class ActivityService {
         
         this.cfg.adminCheckTimes.forEach((timeStr, index) => {
             const [hours, minutes] = timeStr.split(":").map(Number);
-            this.setupTimer(hours, minutes, () => {
+            this.setupTimer(hours, minutes, async () => {
                 this.logger.timing(`执行定时检查任务 #${index + 1} (${timeStr})`);
-                this.updateActivityData();
+                await this.updateActivityData();
+                await this.checkActivityStatusChange();
             }, `检查定时器 #${index + 1}: ${timeStr}`);
         });
 
         this.cfg.adminSendTimes.forEach((timeStr, index) => {
             const [hours, minutes] = timeStr.split(":").map(Number);
-            this.setupTimer(hours, minutes, () => {
+            this.setupTimer(hours, minutes, async () => {
                 this.logger.timing(`执行定时发送任务 #${index + 1} (${timeStr})`);
-                this.checkAndSendProfileReminders();
+                await this.checkAndSendProfileReminders();
             }, `发送定时器 #${index + 1}: ${timeStr}`);
         });
+
+        if (this.cfg.adminNoActivityNotification) {
+            const [noActivityHours, noActivityMinutes] = this.cfg.adminNoActivityTime.split(":").map(Number);
+            this.setupTimer(noActivityHours, noActivityMinutes, () => {
+                this.logger.timing(`执行今日无活动通知任务 (${this.cfg.adminNoActivityTime})`);
+                this.checkAndSendNoActivityNotification();
+            }, `无活动通知定时器: ${this.cfg.adminNoActivityTime}`);
+        }
 
         const minuteTimer = setInterval(async () => {
             await this.checkAndSendActivityReminders();
@@ -312,15 +342,17 @@ class ActivityService {
         const previousActivityCount = this.todayActivities.length;
         const previousTMPCount = this.todayTMPEvents.length;
         const previousReminderCount = this.sentReminders.size;
+        const previousNoActivityNotification = this.sentNoActivityNotification;
         
         this.logger.info(`[数据重置] 开始重置数据，本地时间: ${localTime}, 本地日期: ${localDate}, UTC日期: ${utcDate}`);
-        this.logger.info(`[数据重置] 重置前数据: 活动${previousActivityCount}个, TMP${previousTMPCount}个, 提醒${previousReminderCount}个`);
+        this.logger.info(`[数据重置] 重置前数据: 活动${previousActivityCount}个, TMP${previousTMPCount}个, 提醒${previousReminderCount}个, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}`);
         
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders.clear();
+        this.sentNoActivityNotification = false;
         
-        this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0`);
+        this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}→未发送`);
         
         this.updateActivityData().then(() => {
             this.logger.info(`[数据重置] 重置后数据更新完成: 活动${this.todayActivities.length}个, TMP${this.todayTMPEvents.length}个`);
@@ -457,6 +489,8 @@ class ActivityService {
     }
 
     async checkAndSendProfileReminders() {
+        await this.updateActivityData();
+        
         if (this.todayActivities.length === 0) {
             this.logger.debug("今日没有活动，跳过档位检查");
             return;
@@ -478,6 +512,43 @@ class ActivityService {
                     this.logger.error(`发送消息到管理群组 ${groupId} 失败:`, error.message);
                 }
             }
+        }
+    }
+
+    async checkAndSendNoActivityNotification(manualTest = false) {
+        if (!manualTest && this.sentNoActivityNotification) {
+            this.logger.debug("今日已发送过无活动通知，跳过");
+            return;
+        }
+
+        if (this.todayActivities.length > 0 || this.todayTMPEvents.length > 0) {
+            this.logger.debug(`今日有活动（车队平台: ${this.todayActivities.length}个, TMP: ${this.todayTMPEvents.length}个），不发送无活动通知`);
+            return;
+        }
+
+        this.logger.info(`${manualTest ? "手动测试" : "自动"}今日无活动，发送通知到管理群`);
+        
+        for (const groupId of this.cfg.adminGroups) {
+            try {
+                await this.sendToGroup(groupId, this.cfg.adminNoActivityMessage, "管理群组");
+                this.logger.message(`已发送无活动通知到管理群组 ${groupId}`);
+            } catch (error) {
+                this.logger.error(`发送无活动通知到管理群组 ${groupId} 失败:`, error.message);
+            }
+        }
+
+        if (!manualTest) {
+            this.sentNoActivityNotification = true;
+            this.logger.debug("已标记今日无活动通知为已发送");
+        }
+    }
+
+    async checkActivityStatusChange() {
+        await this.updateActivityData();
+        if (this.sentNoActivityNotification && (this.todayActivities.length > 0 || this.todayTMPEvents.length > 0)) {
+            this.logger.info(`检测到活动状态变化：之前无活动，现在有活动（车队平台: ${this.todayActivities.length}个, TMP: ${this.todayTMPEvents.length}个）`);
+            this.sentNoActivityNotification = false;
+            await this.checkAndSendProfileReminders();
         }
     }
 
@@ -648,7 +719,7 @@ class ActivityService {
         });
 
         if (availableBots.length === 0) {
-            throw new Error(`没有可用的聊天平台适配器（当前不支持邮件/电报/Discord/qq官机/微信公众号）`);
+            throw new Error(`没有可用的聊天平台适配器（当前不支持邮件/电报/Discord/QQ/微信公众号）`);
         }
 
         let lastError = null;
