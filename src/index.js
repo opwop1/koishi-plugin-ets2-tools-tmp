@@ -34,9 +34,9 @@ const __copyProps = (to, from, except, desc) => {
     if (from && (typeof from === "object" || typeof from === "function")) {
         for (const key of __getOwnPropNames(from))
             if (!__hasOwnProp.call(to, key) && key !== except)
-                __defProp(to, key, { 
-                    get: () => from[key], 
-                    enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable 
+                __defProp(to, key, {
+                    get: () => from[key],
+                    enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
                 });
     }
     return to;
@@ -217,9 +217,9 @@ class ActivityService {
         const localTime = now.toLocaleString();
         const localDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
         const utcDate = now.toISOString().split("T")[0];
-        
+
         this.logger.timing(`开始设置每日定时任务，本地时间: ${localTime}, 本地日期: ${localDate}, UTC日期: ${utcDate}`);
-        
+
         const resetHour = 2;
         const resetMinute = 0;
         const resetDelay = this.getNextTime(resetHour, resetMinute);
@@ -234,7 +234,7 @@ class ActivityService {
         }, resetDelay);
         this.timers.push(resetTimer);
         this.logger.timing(`设置数据重置定时器: ${resetHour}:${resetMinute.toString().padStart(2, "0")}, 延迟: ${resetDelay}ms`);
-        
+
         this.cfg.adminCheckTimes.forEach((timeStr, index) => {
             const [hours, minutes] = timeStr.split(":").map(Number);
             this.setupTimer(hours, minutes, async () => {
@@ -302,22 +302,22 @@ class ActivityService {
         const localTime = now.toLocaleString();
         const localDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
         const utcDate = now.toISOString().split("T")[0];
-        
+
         const previousActivityCount = this.todayActivities.length;
         const previousTMPCount = this.todayTMPEvents.length;
         const previousReminderCount = this.sentReminders.size;
         const previousNoActivityNotification = this.sentNoActivityNotification;
-        
+
         this.logger.info(`[数据重置] 开始重置数据，本地时间: ${localTime}, 本地日期: ${localDate}, UTC日期: ${utcDate}`);
         this.logger.info(`[数据重置] 重置前数据: 活动${previousActivityCount}个, TMP${previousTMPCount}个, 提醒${previousReminderCount}个, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}`);
-        
+
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders.clear();
         this.sentNoActivityNotification = false;
-        
+
         this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}→未发送`);
-        
+
         this.updateActivityData().then(() => {
             this.logger.info(`[数据重置] 重置后数据更新完成: 活动${this.todayActivities.length}个, TMP${this.todayTMPEvents.length}个`);
         }).catch(error => {
@@ -333,7 +333,7 @@ class ActivityService {
                 this.updateTodayActivities(),
                 this.updateTodayTMPEvents()
             ]);
-            
+
             const duration = Date.now() - startTime;
             this.logger.info(`活动数据更新完成，耗时: ${duration}ms`);
             this.logger.debug(`今日活动数量: ${this.todayActivities.length}, TMP活动数量: ${this.todayTMPEvents.length}`);
@@ -345,7 +345,7 @@ class ActivityService {
     async updateTodayActivities() {
         try {
             this.todayActivities = [];
-            
+
             const protocol = this.cfg.adminUseHttps ? "https://" : "http://";
             const fullUrl = `${protocol}${this.cfg.adminApiUrl}/api/activity/info/list?token=${this.cfg.adminApiToken}&page=1&limit=50&themeName=`;
             this.logger.api(`请求车队平台API: ${fullUrl.replace(this.cfg.adminApiToken, "***")}`);
@@ -367,14 +367,14 @@ class ActivityService {
                 const now = new Date();
                 const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
                 this.logger.debug(`[活动更新] 当前本地日期: ${today}, UTC日期: ${new Date().toISOString().split("T")[0]}`);
-                
+
                 const originalCount = response.data.list.length;
                 this.logger.debug(`[活动更新] API返回活动总数: ${originalCount}`);
                 if (this.cfg.debugMode && originalCount > 0) {
                     const activityDates = response.data.list.map(a => `${a.themeName}: ${a.startTime?.split(" ")[0]}`);
                     this.logger.debug(`[活动更新] 所有活动日期:`, activityDates);
                 }
-                
+
                 this.todayActivities = response.data.list.filter((activity) => {
                     const activityDate = activity.startTime?.split(" ")[0];
                     const isToday = activityDate === today;
@@ -383,7 +383,7 @@ class ActivityService {
                     }
                     return isToday;
                 });
-                
+
                 this.logger.info(`[活动更新] 从车队平台找到 ${this.todayActivities.length}/${originalCount} 个今日活动`);
                 if (this.cfg.debugMode && this.todayActivities.length > 0) {
                     const todayActivityNames = this.todayActivities.map(a => `${a.themeName}: ${a.startTime}`);
@@ -402,12 +402,12 @@ class ActivityService {
     async updateTodayTMPEvents() {
         try {
             this.todayTMPEvents = [];
-            
+
             if (!this.cfg.adminVtcId) {
                 this.logger.warn("[TMP活动更新] TMP API请求失败：未配置adminVtcId");
                 return;
             }
-            
+
             const tmpApiUrl = `https://api.truckersmp.com/v2/vtc/${this.cfg.adminVtcId}/events/attending/`;
             this.logger.api(`[TMP活动更新] 请求TMP API: ${tmpApiUrl}`);
 
@@ -420,15 +420,15 @@ class ActivityService {
                 const now = new Date();
                 const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
                 this.logger.debug(`[TMP活动更新] 当前本地日期: ${today}, UTC日期: ${new Date().toISOString().split("T")[0]}`);
-                
+
                 const originalCount = response.response.length;
                 this.logger.debug(`[TMP活动更新] API返回活动总数: ${originalCount}`);
-                
+
                 if (this.cfg.debugMode && originalCount > 0) {
                     const eventDates = response.response.map(e => `${e.name}: ${e.start_at?.split(" ")[0]}`);
                     this.logger.debug(`[TMP活动更新] 所有活动日期:`, eventDates);
                 }
-                
+
                 this.todayTMPEvents = response.response.filter((event) => {
                     const eventDate = event.start_at?.split(" ")[0];
                     const isToday = eventDate === today;
@@ -437,9 +437,9 @@ class ActivityService {
                     }
                     return isToday;
                 });
-                
+
                 this.logger.info(`[TMP活动更新] 从TMP找到 ${this.todayTMPEvents.length}/${originalCount} 个今日活动`);
-                
+
                 if (this.cfg.debugMode && this.todayTMPEvents.length > 0) {
                     const todayEventNames = this.todayTMPEvents.map(e => `${e.name}: ${e.start_at}`);
                     this.logger.debug(`[TMP活动更新] 今日活动详情:`, todayEventNames);
@@ -454,12 +454,12 @@ class ActivityService {
 
     async checkAndSendProfileReminders() {
         await this.updateActivityData();
-        
+
         if (this.todayActivities.length === 0) {
             this.logger.debug("今日没有活动，跳过档位检查");
             return;
         }
-        
+
         this.logger.debug(`开始检查 ${this.todayActivities.length} 个活动的档位状态`);
 
         for (const activity of this.todayActivities) {
@@ -491,7 +491,7 @@ class ActivityService {
         }
 
         this.logger.info(`${manualTest ? "手动测试" : "自动"}今日无活动，发送通知到管理群`);
-        
+
         for (const groupId of this.cfg.adminGroups) {
             try {
                 await this.sendToGroup(groupId, this.cfg.adminNoActivityMessage, "管理群组");
@@ -523,6 +523,12 @@ class ActivityService {
         let remindersSent = 0;
         this.logger.debug(`检查 ${this.todayActivities.length} 个活动的提醒时间，当前本地日期: ${today}, UTC日期: ${todayUTC}`);
 
+        if (this.cfg.mainGroups.length === 0) {
+            this.logger.warn(`未配置主群组ID (mainGroups为空)，活动提醒将无法发送`);
+        } else {
+            this.logger.debug(`已配置 ${this.cfg.mainGroups.length} 个主群组: ${this.cfg.mainGroups.join(', ')}`);
+        }
+
         for (const activity of this.todayActivities) {
             try {
                 const activityDate = activity.startTime?.split(" ")[0];
@@ -542,25 +548,35 @@ class ActivityService {
                 const minutesLeft = Math.floor(totalSecondsLeft / 60);
                 const secondsLeft = totalSecondsLeft % 60;
                 this.logger.debug(`活动 "${activity.themeName}" 剩余时间: ${minutesLeft} 分 ${secondsLeft} 秒`);
-                if (totalSecondsLeft >= -30 && totalSecondsLeft <= 0) {
+                this.logger.debug(`活动 "${activity.themeName}" 时间检查: totalSecondsLeft=${totalSecondsLeft}, 触发条件: -300 <= ${totalSecondsLeft} <= 0`);
+
+                if (totalSecondsLeft >= -300 && totalSecondsLeft <= 0) {
                     const startReminderKey = `${activity.id}_started`;
                     if (!this.sentReminders.has(startReminderKey)) {
-                        this.logger.debug(`触发活动开始提醒: ${activity.themeName}`);
+                        this.logger.info(`触发活动开始提醒: ${activity.themeName}`);
                         await this.sendActivityStartReminder(activity);
                         this.sentReminders.add(startReminderKey);
                         remindersSent++;
+                    } else {
+                        this.logger.debug(`活动 "${activity.themeName}" 开始提醒已发送过，跳过`);
                     }
+                } else {
+                    this.logger.debug(`活动 "${activity.themeName}" 未满足开始提醒条件，当前剩余 ${totalSecondsLeft} 秒`);
                 }
+
                 if (totalSecondsLeft < 0) continue;
                 for (const reminderTime of this.cfg.mainActivityReminderTimes) {
                     const reminderTimeSeconds = reminderTime * 60;
-                    if (totalSecondsLeft <= reminderTimeSeconds && totalSecondsLeft > reminderTimeSeconds - 30) {
+                    this.logger.debug(`活动 "${activity.themeName}" ${reminderTime}分钟前提醒检查: totalSecondsLeft=${totalSecondsLeft}, reminderTimeSeconds=${reminderTimeSeconds}, 条件: ${reminderTimeSeconds - 60} <= ${totalSecondsLeft} <= ${reminderTimeSeconds}`);
+                    if (totalSecondsLeft <= reminderTimeSeconds && totalSecondsLeft > reminderTimeSeconds - 60) {
                         const reminderKey = `${activity.id}_${reminderTime}`;
                         if (!this.sentReminders.has(reminderKey)) {
-                            this.logger.debug(`触发提醒: ${activity.themeName} - ${reminderTime} 分钟前`);
-                            await this.sendActivityReminder(activity, minutesLeft);
+                            this.logger.info(`触发活动前提醒: ${activity.themeName} - ${reminderTime} 分钟前`);
+                            await this.sendActivityReminder(activity, reminderTime);
                             this.sentReminders.add(reminderKey);
                             remindersSent++;
+                        } else {
+                            this.logger.debug(`活动 "${activity.themeName}" ${reminderTime}分钟前提醒已发送过，跳过`);
                         }
                     }
                 }
@@ -570,7 +586,9 @@ class ActivityService {
         }
 
         if (remindersSent > 0) {
-            this.logger.debug(`本轮发送了 ${remindersSent} 个活动提醒`);
+            this.logger.info(`本轮发送了 ${remindersSent} 个活动提醒`);
+        } else {
+            this.logger.debug(`本轮未发送任何活动提醒`);
         }
     }
 
@@ -619,7 +637,7 @@ class ActivityService {
             this.logger.matching(`活动匹配: "${activity.themeName}" - 找到TMP匹配: ${!!tmpEvent}`);
 
             const replacements = this.createActivityReplacements(activity, tmpEvent);
-            
+
             let message = this.cfg.mainActivityStartReminderMessage;
             for (const [key, value] of Object.entries(replacements)) {
                 message = message.replace(new RegExp(`{${key}}`, "g"), value);
@@ -631,7 +649,7 @@ class ActivityService {
 
             message = message.replace(/\\n/g, "\n").trim();
             const fullMessage = `@全体成员\n${message}`;
-            
+
             await this.sendToMainGroups(fullMessage, activity.themeName, "开始提醒");
         } catch (error) {
             this.logger.error(`发送活动开始提醒失败:`, error.message);
@@ -646,7 +664,7 @@ class ActivityService {
             this.logger.matching(`活动匹配: "${activity.themeName}" - 找到TMP匹配: ${!!tmpEvent}`);
 
             const replacements = this.createActivityReplacements(activity, tmpEvent, minutesLeft);
-            
+
             let message = this.cfg.mainActivityReminderMessage;
             for (const [key, value] of Object.entries(replacements)) {
                 message = message.replace(new RegExp(`{${key}}`, "g"), value);
@@ -658,7 +676,7 @@ class ActivityService {
 
             message = message.replace(/\\n/g, "\n").trim();
             const fullMessage = `@全体成员\n${message}`;
-            
+
             await this.sendToMainGroups(fullMessage, activity.themeName, `${minutesLeft}分钟前提醒`);
         } catch (error) {
             this.logger.error(`发送活动提醒失败:`, error.message);
@@ -721,60 +739,60 @@ function registerBaseCommands(ctx, cfg) {
     ctx.command('查询 <tmpId>')
         .usage("查询TMP玩家信息")
         .action(async ({ session }, tmpId) => await commands.tmpQuery(ctx, cfg, session, tmpId));
-        
+
     ctx.command('美卡服务器')
         .usage("查询美国卡车模拟器TMP服务器信息")
         .action(async () => await commands.tmpServer(ctx, cfg, 'ATS'));
-        
+
     ctx.command('欧卡服务器')
         .usage("查询欧洲卡车模拟2TMP服务器信息")
         .action(async () => await commands.tmpServer(ctx, cfg, 'ETS2'));
-        
+
     ctx.command('绑定 <tmpId>')
         .usage("绑定TmpId")
         .action(async ({ session }, tmpId) => await commands.tmpBind(ctx, cfg, session, tmpId));
-        
+
     ctx.command('路况 <serverName>')
         .usage("查询欧洲卡车模拟2服务器路况")
         .example("路况 - s1")
         .action(async ({ session }, serverName) => await commands.tmpTraffic(ctx, cfg, serverName));
-        
+
     ctx.command('定位 <tmpId>')
         .usage("定位玩家线上位置")
         .action(async ({ session }, tmpId) => await commands.tmpPosition(ctx, cfg, session, tmpId));
-        
+
     ctx.command('tmp版本')
         .usage("查询TruckersMP支持的游戏版本")
         .action(async () => await commands.tmpVersion(ctx));
-        
+
     ctx.command('地图dlc价格')
         .usage("查询欧洲卡车模拟2地图dlc价格")
         .action(async ({ session }) => await commands.tmpDlcMap(ctx, session));
-        
+
     ctx.command('里程排行榜')
         .usage("查询欧洲卡车模拟2里程排行榜")
         .action(async ({ session }) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.total));
-        
+
     ctx.command('今日里程排行榜')
         .usage("查询欧洲卡车模拟2今日里程排行榜")
         .action(async ({ session }) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.today));
-        
+
     ctx.command('vtc查询 <vtcid>')
         .usage("查询TruckersMP VTC信息")
         .action(async ({ session }, vtcid) => await commands.tmpVtc(ctx, cfg, session, vtcid));
-        
+
     ctx.command(`重置密码 [targetTeamId:string]`, "重置欧卡车队平台密码")
         .usage("重置自己的密码，或管理员重置指定teamId的密码")
         .example(`重置密码 - 重置自己的密码`)
         .example(`重置密码 - 管理员重置指定teamId的密码`)
         .action(async ({ session }, targetTeamId) => await commands.resetPassword(ctx, cfg, session, targetTeamId));
-        
+
     ctx.command(`查询积分 [targetQQ:string]`, "查询欧卡车队平台积分")
         .usage("查询自己或指定QQ号的积分，在群聊中可@他人查询")
         .example(`查询积分 - 查询自己的积分`)
         .example(`查询积分 123456 - 查询指定QQ号的积分`)
         .action(async ({ session }, targetQQ) => await commands.queryPoint(ctx, cfg, session, targetQQ));
-        
+
     ctx.command('规则查询')
         .action(async () => 'TruckersMP官方规则链接：https://truckersmp.com/knowledge-base/article/746');
 }
