@@ -1,6 +1,6 @@
 module.exports = async (ctx, cfg, session, targetTeamId) => {
-    const { url, token, logOutput } = cfg.mainSettings;
-    const { adminUsers } = cfg.resetPassword;
+    const { url, token, logOutput } = cfg.mainSettings?.settings || {};
+    const { adminUsers } = cfg.resetPassword?.settings || {};
     const currentUserQQ = session.userId;
     const isAdmin = adminUsers.includes(currentUserQQ);
     const isPrivateChat = session.channelId === `private:${currentUserQQ}`;
