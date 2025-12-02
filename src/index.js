@@ -66,15 +66,14 @@ exports.Config = koishi_1.Schema.intersect([
             tmpQuery: koishi_1.Schema.boolean().default(true).description('是否启用查询功能'),
             tmpTraffic: koishi_1.Schema.boolean().default(true).description('是否启用路况查询'),
             tmpServer: koishi_1.Schema.boolean().default(true).description('是否启用服务器查询'),
-            tmpBind: koishi_1.Schema.boolean().default(true).description('是否启用绑定功能'),
             tmpPosition: koishi_1.Schema.boolean().default(true).description('是否启用定位功能'),
             tmpVersion: koishi_1.Schema.boolean().default(true).description('是否启用版本查询'),
             tmpDlcMap: koishi_1.Schema.boolean().default(true).description('是否启用DLC地图查询'),
             tmpMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用里程排行榜'),
             tmpVtc: koishi_1.Schema.boolean().default(true).description('是否启用VTC查询'),
-            mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台功能'),
-            resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用重置密码功能'),
-            tmpActivityService: koishi_1.Schema.boolean().default(false).description('是否启用活动查询')
+            mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
+            resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用车队平台重置密码功能'),
+            tmpActivityService: koishi_1.Schema.boolean().default(false).description('是否启用车队活动查询')
         }).description('指令配置'),
         baiduTranslate: koishi_1.Schema.object({
             enable: koishi_1.Schema.boolean().default(false).description('是否启用百度翻译'),
@@ -177,7 +176,7 @@ function registerBaseCommands(ctx, cfg) {
             .action(async () => await commands.tmpServer(ctx, cfg, 'ETS2'));
     }
 
-    if (cfg.commands?.tmpBind) {
+    if (cfg.commands?.tmpQuery) {
         ctx.command('绑定 <tmpId>')
             .usage("绑定TmpId")
             .action(async ({ session }, tmpId) => await commands.tmpBind(ctx, cfg, session, tmpId));
