@@ -85,8 +85,8 @@
       ets: {
         tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
         multipliers: {
-          x: 71282,
-          y: 56532
+          x: 70272,
+          y: 76157
         },
         breakpoints: {
           uk: {
@@ -103,8 +103,8 @@
         // 游戏地转地图坐标
         calculateMapCoordinate (x, y) {
           return [
-            x / 1.325928 + mapConfig.ets.multipliers.x,
-            y / 1.325928 + mapConfig.ets.multipliers.y
+            x / 1.609055 + mapConfig.ets.multipliers.x,
+            y / 1.609055 + mapConfig.ets.multipliers.y
           ];
         }
       },
@@ -140,7 +140,8 @@
     let map = L.map('map', {
       attributionControl: false,
       crs: L.CRS.Simple,
-      zoomControl: false
+      zoomControl: false,
+      zoomSnap: 0.1
     });
 
     function setData(data) {
@@ -152,8 +153,10 @@
 
       // 瓦片地图
       L.tileLayer(mapConfig[data.mapType].tileUrl, {
-        minZoom: 1,
+        minZoom: 0,
         maxZoom: 8,
+        minNativeZoom: 1,
+        maxNativeZoom: 8,
         tileSize: 512,
         bounds: bounds,
         reuseTiles: true

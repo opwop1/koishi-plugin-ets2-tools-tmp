@@ -117,8 +117,8 @@
       ets: {
         tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
         multipliers: {
-          x: 71282,
-          y: 56532
+          x: 70272,
+          y: 76157
         },
         breakpoints: {
           uk: {
@@ -135,8 +135,8 @@
         // 游戏地转地图坐标
         calculateMapCoordinate (x, y) {
           return [
-            x / 1.325928 + mapConfig.ets.multipliers.x,
-            y / 1.325928 + mapConfig.ets.multipliers.y
+            x / 1.609055 + mapConfig.ets.multipliers.x,
+            y / 1.609055 + mapConfig.ets.multipliers.y
           ];
         }
       },
