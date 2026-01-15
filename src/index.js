@@ -97,10 +97,19 @@ exports.Config = koishi_1.Schema.intersect([
         }).description('路况查询配置'),
         mainSettings: koishi_1.Schema.object({
             settings: koishi_1.Schema.object({
-                url: koishi_1.Schema.string().description("API服务器地址"),
-                token: koishi_1.Schema.string().description("API认证令牌"),
+                platformVersion: koishi_1.Schema.union([
+                    koishi_1.Schema.const("v1").description("车队平台V1.0"),
+                    koishi_1.Schema.const("v2").description("车队平台V2.0")
+                ]).default("v1").description("车队平台版本"),
+                url: koishi_1.Schema.string().description("API服务器地址（V1平台地址 / V2 OpenAPI地址，不含协议）"),
+                token: koishi_1.Schema.string().description("API认证令牌（V1平台Token / V2 OpenAPI Token）"),
+                mailEnabled: koishi_1.Schema.boolean().description("V2.0重置密码后发送邮件（需启用 adapter-mail）").default(false),
+                mailTo: koishi_1.Schema.string().description("V2.0重置密码通知邮箱（自定义邮箱地址）").default(""),
+                mailSubject: koishi_1.Schema.string().description("V2.0重置密码邮件标题").default("重置密码通知"),
+                mailTemplate: koishi_1.Schema.string().description("V2.0重置密码邮件内容模板，支持变量：{uid} {qq} {password} {psw}").default("我们已将您平台的密码进行重置，您的账号:{uid},新的密码为：{psw} 请妥善保管好您的密码，以防泄露"),
+                mailFromName: koishi_1.Schema.string().description("V2.0重置密码邮件发件人名字（覆盖 adapter-mail 的 name）").default(""),
                 logOutput: koishi_1.Schema.boolean().description("是否输出日志").default(true)
-            })
+            }).description("V1/V2通用配置")
         }).description("车队平台配置"),
         resetPassword: koishi_1.Schema.object({
             settings: koishi_1.Schema.object({
@@ -159,6 +168,30 @@ exports.Config = koishi_1.Schema.intersect([
         }).description("活动查询配置")
     }).description('功能配置')
 ]);
+
+
+function logDisabledCommands(ctx, cfg) {
+    const commandFlags = cfg.commands || {};
+    const disabled = [];
+    const commandList = [
+        { key: 'tmpQuery', label: '??/??' },
+        { key: 'tmpServer', label: '?????/?????' },
+        { key: 'tmpTraffic', label: '??' },
+        { key: 'tmpPosition', label: '??' },
+        { key: 'tmpVersion', label: 'tmp??' },
+        { key: 'tmpDlcMap', label: '??dlc??' },
+        { key: 'tmpMileageRanking', label: '?????/???????' },
+        { key: 'tmpVtc', label: 'vtc??' },
+        { key: 'resetPassword', label: '????' },
+        { key: 'mainSettings', label: '????' }
+    ];
+    for (const item of commandList) {
+        if (commandFlags[item.key] === false) disabled.push(item.label);
+    }
+    if (disabled.length) {
+        ctx.logger.info(`[TMP-BOT] ??????????? commands ?????${disabled.join('?')}`);
+    }
+}
 
 function registerBaseCommands(ctx, cfg) {
     if (cfg.commands?.tmpQuery) {
@@ -225,11 +258,12 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.resetPassword) {
-        ctx.command(`重置密码 [targetTeamId:string]`, "重置欧卡车队平台密码")
-            .usage("重置自己的密码，或管理员重置指定teamId的密码")
+        ctx.command(`重置密码 [targetTeamId:string] [password:string]`, "重置欧卡车队平台密码")
+            .usage("V1.0使用teamId，V2.0使用QQ号；管理员可用 uid=12345；V2.0可指定新密码")
             .example(`重置密码 - 重置自己的密码`)
-            .example(`重置密码 - 管理员重置指定teamId的密码`)
-            .action(async ({ session }, targetTeamId) => await commands.resetPassword(ctx, cfg, session, targetTeamId));
+            .example(`重置密码 789 - 管理员重置指定teamId的密码`)
+            .example(`重置密码 123456 Abc123def4 - V2.0指定QQ与新密码`)
+            .action(async ({ session }, targetTeamId, password) => await commands.resetPassword(ctx, cfg, session, targetTeamId, password));
     }
 
     if (cfg.commands?.mainSettings) {
@@ -256,6 +290,8 @@ function apply(ctx, cfg) {
     }
 
     registerBaseCommands(ctx, cfg);
+
+    logDisabledCommands(ctx, cfg);
 
     if (cfg.commands?.tmpActivityService) {
         const activityConfig = {
