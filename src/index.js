@@ -18,7 +18,8 @@ const commands = {
     tmpMileageRanking: require('./command/tmpMileageRanking'),
     resetPassword: require('./command/ets-app/resetPassword'),
     queryPoint: require('./command/ets-app/queryPoint'),
-    tmpVtc: require('./command/tmpVtc')
+    tmpVtc: require('./command/tmpVtc'),
+    tmpFootprint: require('./command/tmpFootprint')
 };
 const { ActivityService } = require('./command/tmpActivityService');
 
@@ -72,6 +73,7 @@ exports.Config = koishi_1.Schema.intersect([
             tmpDlcMap: koishi_1.Schema.boolean().default(true).description('是否启用DLC地图查询'),
             tmpMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用里程排行榜'),
             tmpVtc: koishi_1.Schema.boolean().default(true).description('是否启用VTC查询'),
+            tmpFootprint: koishi_1.Schema.boolean().default(true).description('是否启用今日足迹'),
             mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
             resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用车队平台重置密码功能'),
             tmpActivityService: koishi_1.Schema.boolean().default(false).description('是否启用车队活动查询')
@@ -182,6 +184,7 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'tmpDlcMap', label: '??dlc??' },
         { key: 'tmpMileageRanking', label: '?????/???????' },
         { key: 'tmpVtc', label: 'vtc??' },
+        { key: 'tmpFootprint', label: '???' },
         { key: 'resetPassword', label: '????' },
         { key: 'mainSettings', label: '????' }
     ];
@@ -255,6 +258,13 @@ function registerBaseCommands(ctx, cfg) {
         ctx.command('vtc查询 <vtcid>')
             .usage("查询TruckersMP VTC信息")
             .action(async ({ session }, vtcid) => await commands.tmpVtc(ctx, cfg, session, vtcid));
+    }
+
+    if (cfg.commands?.tmpFootprint) {
+        ctx.command('今日足迹 <serverName>')
+            .usage("查询今日足迹")
+            .example("今日足迹 s1")
+            .action(async ({ session }, serverName) => await commands.tmpFootprint(ctx, session, serverName));
     }
 
     if (cfg.commands?.resetPassword) {

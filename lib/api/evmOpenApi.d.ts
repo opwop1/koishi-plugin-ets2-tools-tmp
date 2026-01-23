@@ -31,3 +31,9 @@ export function dlcList(http: any, type: any): Promise<{
 export function mileageRankingList(http: any, rankingType: any, tmpId: any): Promise<{
     error: boolean;
 }>;
+/**
+ * 查询玩家历史数据
+ */
+export function mapPlayerHistory(http: any, tmpId: any, serverId: any, startTime: any, endTime: any): Promise<{
+    error: boolean;
+}>;
