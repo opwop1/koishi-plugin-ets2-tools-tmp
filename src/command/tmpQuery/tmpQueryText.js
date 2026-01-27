@@ -22,6 +22,7 @@ const userGroup = {
  * 查询玩家信息
  */
 module.exports = async (ctx, cfg, session, tmpId) => {
+    const { vtcId } = cfg.tmpActivityService?.api || {};
     if (tmpId && tmpId.startsWith("<at ")) {
         if (tmpId.startsWith('<at ')) {
             queryQQ = tmpId.replace('<at ', '');
@@ -79,33 +80,47 @@ module.exports = async (ctx, cfg, session, tmpId) => {
             }
         }
         message += '\n🚚车队角色: ' + playerInfo.data.vtcRole;
-        if (playerInfo.data.vtcId == 86009) {
+        if (playerInfo.data.vtcId == vtcId) {
             const { url, token, logOutput, platformVersion } = cfg.mainSettings?.settings || {};
-            if ((platformVersion || "v1").toLowerCase() === "v2") {
-                message += "\n车队平台V2.0暂不支持积分查询";
-            } else {
+            const platform = (platformVersion || "v1").toLowerCase();
             try {
-                if (logOutput) {
-                    ctx.logger.info(`tmpQuery：开始查询TmpID ${tmpId} 的积分`);
+                let rewardPoints = 0;
+                if (platform === "v2") {
+                    const baseUrl = url;
+                    const userInfoUrl = `https://${baseUrl}/members/get?token=${token}&tmpId=${tmpId}`;
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] tmpQuery：开始查询TmpID ${tmpId} 的V2.0积分`);
+                        ctx.logger.info(`[TMP_BOT] 请求V2.0用户信息: ${userInfoUrl}`);
+                    }
+                    const userInfoResponse = await ctx.http.get(userInfoUrl);
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] V2.0用户信息响应: ${JSON.stringify(userInfoResponse)}`);
+                    }
+                    if (userInfoResponse.code === 200 && userInfoResponse.data) {
+                        rewardPoints = userInfoResponse.data.point || 0;
+                    }
+                } else {
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] tmpQuery：开始查询TmpID ${tmpId} 的V1.0积分`);
+                    }
+                    const userInfoUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=7&tmpId=${tmpId}&tmpName=&teamId=&qq=&state=0&teamRole=`;
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] 请求V1.0用户信息: ${userInfoUrl}`);
+                    }
+                    const userInfoResponse = await ctx.http.post(userInfoUrl);
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] V1.0用户信息响应: ${JSON.stringify(userInfoResponse)}`);
+                    }
+                    const userList = userInfoResponse.page?.list || [];
+                    const userInfo = userList[0];
+                    rewardPoints = userInfo.rewardPoints || 0;
                 }
-                const userInfoUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=7&tmpId=${tmpId}&tmpName=&teamId=&qq=&state=0&teamRole=`;
-                if (logOutput) {
-                    ctx.logger.info(`请求用户信息: ${userInfoUrl}`);
-                }
-                const userInfoResponse = await ctx.http.post(userInfoUrl);
-                if (logOutput) {
-                    ctx.logger.info(`用户信息响应: ${JSON.stringify(userInfoResponse)}`);
-                }
-                const userList = userInfoResponse.page?.list || [];
-                const userInfo = userList[0];
-                const rewardPoints = userInfo.rewardPoints || 0;
                 message += `\n⭐ 当前车队积分: ${rewardPoints}`;
             } catch (error) {
                 ctx.logger.error(`积分查询过程出错: ${error}`);
                 if (error.response) {
                     message += '查询出错';
                 }
-            }
             }
         }
     }

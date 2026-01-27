@@ -5,7 +5,7 @@ exports.apply = apply;
 
 const koishi_1 = require("koishi");
 const model = require('./database/model');
-const { MileageRankingType } = require('./util/constant');
+const { ServerType } = require('./util/constant')
 
 const commands = {
     tmpQuery: require('./command/tmpQuery/tmpQuery'),
@@ -262,10 +262,17 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.tmpFootprint) {
-        ctx.command('今日足迹 <serverName>')
-            .usage("查询今日足迹")
-            .example("今日足迹 s1")
-            .action(async ({ session }, serverName) => await commands.tmpFootprint(ctx, session, serverName));
+        ctx.command('今日足迹 [tmpId:string]')
+            .usage("查询ETS服务器今日足迹")
+            .example("今日足迹")
+            .example("今日足迹 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId));
+
+        ctx.command('今日足迹p [tmpId:string]')
+            .usage("查询Promods服务器今日足迹")
+            .example("今日足迹p")
+            .example("今日足迹p 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId));
     }
 
     if (cfg.commands?.resetPassword) {
