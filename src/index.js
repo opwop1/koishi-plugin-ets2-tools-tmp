@@ -5,7 +5,8 @@ exports.apply = apply;
 
 const koishi_1 = require("koishi");
 const model = require('./database/model');
-const { ServerType } = require('./util/constant')
+const { ServerType } = require('./util/constant');
+const { MileageRankingType } = require('./util/constant');
 
 const commands = {
     tmpQuery: require('./command/tmpQuery/tmpQuery'),
