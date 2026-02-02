@@ -186,7 +186,7 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'tmpDlcMap', label: '地图dlc价格' },
         { key: 'tmpMileageRanking', label: '里程排行榜/今日里程排行榜' },
         { key: 'tmpVtc', label: 'vtc查询' },
-        { key: 'tmpFootprint', label: '今日足迹' },
+        { key: 'tmpFootprint', label: '足迹查询' },
         { key: 'resetPassword', label: '重置密码' },
         { key: 'mainSettings', label: '查询积分' }
     ];
@@ -263,17 +263,53 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.tmpFootprint) {
+        ctx.command('上月足迹 [tmpId:string]')
+            .usage("查询ETS服务器今日足迹")
+            .example("上月足迹")
+            .example("上月足迹 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId, 'lastMonth'));
+
+        ctx.command('上月足迹p [tmpId:string]')
+            .usage("查询Promods服务器今日足迹")
+            .example("本月上月足迹p足迹p")
+            .example("上月足迹p 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId, 'lastMonth'));
+
+        ctx.command('本月足迹 [tmpId:string]')
+            .usage("查询ETS服务器今日足迹")
+            .example("本月足迹")
+            .example("本月足迹 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId, 'thisMonth'));
+
+        ctx.command('本月足迹p [tmpId:string]')
+            .usage("查询Promods服务器今日足迹")
+            .example("本月足迹p")
+            .example("本月足迹p 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId, 'thisMonth'));
+
+        ctx.command('昨日足迹 [tmpId:string]')
+            .usage("查询ETS服务器今日足迹")
+            .example("昨日足迹")
+            .example("昨日足迹 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId, 'yesterday'));
+
+        ctx.command('昨日足迹p [tmpId:string]')
+            .usage("查询Promods服务器今日足迹")
+            .example("昨日足迹p")
+            .example("昨日足迹p 12345")
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId, 'yesterday'));
+
         ctx.command('今日足迹 [tmpId:string]')
             .usage("查询ETS服务器今日足迹")
             .example("今日足迹")
             .example("今日足迹 12345")
-            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId));
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId, 'today'));
 
         ctx.command('今日足迹p [tmpId:string]')
             .usage("查询Promods服务器今日足迹")
             .example("今日足迹p")
             .example("今日足迹p 12345")
-            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId));
+            .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId, 'today'));
     }
 
     if (cfg.commands?.resetPassword) {
