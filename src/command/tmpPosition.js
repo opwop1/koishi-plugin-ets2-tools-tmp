@@ -44,7 +44,7 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     // 查询玩家信息
     let playerInfo = await truckersMpApi.player(ctx.http, tmpId)
     if (playerInfo.error) {
-      return '查询玩家信息失败，请重试'
+      return '查询玩家位置信息失败，请重试'
     }
 
     // 查询线上信息
