@@ -77,7 +77,8 @@ exports.Config = koishi_1.Schema.intersect([
             tmpFootprint: koishi_1.Schema.boolean().default(true).description('是否启用今日足迹'),
             mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
             resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用车队平台重置密码功能'),
-            tmpActivityService: koishi_1.Schema.boolean().default(false).description('是否启用车队活动查询')
+            tmpActivityService: koishi_1.Schema.boolean().default(false).description('是否启用车队活动查询'),
+            tmpVersionCheck: koishi_1.Schema.boolean().default(false).description('是否启用TMP版本更新查询')
         }).description('指令配置'),
         baiduTranslate: koishi_1.Schema.object({
             enable: koishi_1.Schema.boolean().default(false).description('是否启用百度翻译'),
@@ -98,6 +99,10 @@ exports.Config = koishi_1.Schema.intersect([
                 koishi_1.Schema.const(2).description('热力图')
             ]).default(1).description('路况信息展示方式'),
         }).description('路况查询配置'),
+        tmpVersionCheck: koishi_1.Schema.object({
+            checkInterval: koishi_1.Schema.number().description("版本检查间隔（分钟）").default(30),
+            groups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("接收版本更新通知的群组ID列表").default([])
+        }).description("TMP版本更新查询配置"),
         mainSettings: koishi_1.Schema.object({
             settings: koishi_1.Schema.object({
                 Name: koishi_1.Schema.string().description("车队名称"),
@@ -189,7 +194,9 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'tmpVtc', label: 'vtc查询' },
         { key: 'tmpFootprint', label: '足迹查询' },
         { key: 'resetPassword', label: '重置密码' },
-        { key: 'mainSettings', label: '查询积分' }
+        { key: 'mainSettings', label: '查询积分' },
+        { key: 'tmpActivityService', label: '车队活动查询' },
+        { key: 'tmpVersionCheck', label: 'TMP版本更新查询' }
     ];
     for (const item of commandList) {
         if (commandFlags[item.key] !== false) enabled.push(item.label);
@@ -360,6 +367,20 @@ function apply(ctx, cfg) {
         activityService.start();
     } else if (cfg.debugMode) {
         ctx.logger.debug("[TMP-BOT] 活动查询功能已禁用");
+    }
+
+    if (cfg.commands?.tmpVersionCheck) {
+        const { VersionCheckService } = require('./command/tmpVersionCheck');
+        const versionCheckConfig = {
+            checkInterval: cfg.tmpVersionCheck.checkInterval,
+            groups: cfg.tmpVersionCheck.groups,
+            debugMode: cfg.debugMode,
+            debug: cfg.tmpActivityService?.debug
+        };
+        const versionCheckService = new VersionCheckService(ctx, versionCheckConfig);
+        versionCheckService.start();
+    } else if (cfg.debugMode) {
+        ctx.logger.debug("[TMP-BOT] TMP版本更新查询功能已禁用");
     }
 }
 __name(apply, "apply");
