@@ -78,7 +78,8 @@ exports.Config = koishi_1.Schema.intersect([
             mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
             resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用车队平台重置密码功能'),
             tmpActivityService: koishi_1.Schema.boolean().default(false).description('是否启用车队活动查询'),
-            tmpVersionCheck: koishi_1.Schema.boolean().default(false).description('是否启用TMP版本更新查询')
+            tmpVersionCheck: koishi_1.Schema.boolean().default(false).description('是否启用TMP版本更新查询'),
+            tmpQueryGameTime: koishi_1.Schema.boolean().default(true).description('是否启用游戏时长查询功能')
         }).description('指令配置'),
         baiduTranslate: koishi_1.Schema.object({
             enable: koishi_1.Schema.boolean().default(false).description('是否启用百度翻译'),
@@ -103,6 +104,9 @@ exports.Config = koishi_1.Schema.intersect([
             checkInterval: koishi_1.Schema.number().description("版本检查间隔（分钟）").default(30),
             groups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("接收版本更新通知的群组ID列表").default([])
         }).description("TMP版本更新查询配置"),
+        steamApi: koishi_1.Schema.object({
+            key: koishi_1.Schema.string().description("Steam API Key，用于查询游戏时长")
+        }).description("Steam API配置"),
         mainSettings: koishi_1.Schema.object({
             settings: koishi_1.Schema.object({
                 Name: koishi_1.Schema.string().description("车队名称"),
@@ -196,7 +200,8 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'resetPassword', label: '重置密码' },
         { key: 'mainSettings', label: '查询积分' },
         { key: 'tmpActivityService', label: '车队活动查询' },
-        { key: 'tmpVersionCheck', label: 'TMP版本更新查询' }
+        { key: 'tmpVersionCheck', label: 'TMP版本更新查询' },
+        { key: 'tmpQueryGameTime', label: '游戏时长查询' }
     ];
     for (const item of commandList) {
         if (commandFlags[item.key] !== false) enabled.push(item.label);

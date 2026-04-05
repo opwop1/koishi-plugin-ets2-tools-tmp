@@ -1,4 +1,5 @@
-const BASE_API = 'https://api.truckersmp.com/v2';
+const BASE_API = 'https://tmpapi.114512.xyz';
+// const BASE_API = 'https://api.truckersmp.com/v2';
 module.exports = {
     /**
      * 查询玩家信息
