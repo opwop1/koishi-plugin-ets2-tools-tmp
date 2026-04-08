@@ -1,4 +1,4 @@
-const BASE_API = 'https://tmpapi.114512.xyz';
+const BASE_API = 'https://api.114512.xyz/truckersmp';
 // const BASE_API = 'https://api.truckersmp.com/v2';
 module.exports = {
     /**
