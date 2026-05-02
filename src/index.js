@@ -276,16 +276,16 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.tmpFootprint) {
-        ctx.command('本月足迹 [tmpId:string]')
+        ctx.command('近十日足迹 [tmpId:string]')
             .usage("查询ETS服务器今日足迹")
-            .example("本月足迹")
-            .example("本月足迹 12345")
+            .example("近十日足迹")
+            .example("近十日足迹 12345")
             .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.ets, tmpId, 'tenday'));
 
-        ctx.command('本月足迹p [tmpId:string]')
+        ctx.command('近十日足迹p [tmpId:string]')
             .usage("查询Promods服务器今日足迹")
-            .example("本月足迹p")
-            .example("本月足迹p 12345")
+            .example("近十日足迹p")
+            .example("近十日足迹p 12345")
             .action(async ({ session }, tmpId) => await commands.tmpFootprint(ctx, session, ServerType.promods, tmpId, 'tenday'));
 
         ctx.command('昨日足迹 [tmpId:string]')
