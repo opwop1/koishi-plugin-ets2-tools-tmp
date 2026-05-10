@@ -221,26 +221,28 @@ module.exports = async (ctx, cfg, session, tmpId) => {
         }
     }
     
-    message += '\n\n🌟是否Patreon支持者: '
-    if (playerInfo.data.isSponsor) {
-        message += '是'
-    }
-    else {
-        message += '否'
-    }
-    message += '\n💰当前赞助金额: '
-    if (playerInfo.data.sponsorAmount == 'null') {
-        message += '0美金'
-    }
-    else {
-        message += playerInfo.data.sponsorAmount / 100 + '美金'
-    }
-    message += '\n💰全部赞助金额: '
-    if (playerInfo.data.sponsorCumulativeAmount == 'null') {
-        message += '0美金'
-    }
-    else {
-        message += playerInfo.data.sponsorCumulativeAmount / 100 + '美金'
+    if (cfg.commands?.tmpQuerySponsor) {
+        message += '\n\n🌟是否Patreon支持者: '
+        if (playerInfo.data.isSponsor) {
+            message += '是'
+        }
+        else {
+            message += '否'
+        }
+        message += '\n💰当前赞助金额: '
+        if (playerInfo.data.sponsorAmount == 'null') {
+            message += '0美金'
+        }
+        else {
+            message += playerInfo.data.sponsorAmount / 100 + '美金'
+        }
+        message += '\n💰全部赞助金额: '
+        if (playerInfo.data.sponsorCumulativeAmount == 'null') {
+            message += '0美金'
+        }
+        else {
+            message += playerInfo.data.sponsorCumulativeAmount / 100 + '美金'
+        }
     }
     return message;
 };
