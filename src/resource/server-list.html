@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Server List</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background-color: #0b1120;
+    }
+    #container {
+      width: 380px;
+      background: linear-gradient(180deg, #0f1a2e 0%, #0b1120 100%);
+      padding: 0 0 6px 0;
+    }
+
+    /* Header */
+    .header {
+      height: 42px;
+      background-color: rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    }
+    .header .title {
+      color: #8bafff;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    /* Server list */
+    .server-list {
+      padding: 6px 10px 0 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* Server card */
+    .server-card {
+      background: rgba(22, 33, 55, 0.8);
+      border-radius: 6px;
+      border: 1px solid rgba(139, 175, 255, 0.08);
+      overflow: hidden;
+    }
+
+    /* Card info */
+    .server-info {
+      padding: 7px 12px 5px 12px;
+    }
+    .server-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .server-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-indicator.online {
+      background-color: #34d058;
+      box-shadow: 0 0 5px rgba(52, 208, 88, 0.5);
+    }
+    .status-indicator.offline {
+      background-color: #484f58;
+    }
+    .server-name {
+      color: #e6edf3;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+    .player-count {
+      color: #6e7a8a;
+      font-size: 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-left: 6px;
+    }
+    .player-count .num {
+      color: #c9d1d9;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    /* Features row */
+    .features {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 3px;
+    }
+    .feature {
+      font-size: 10px;
+      color: #5a6572;
+      white-space: nowrap;
+    }
+
+    /* Queue badge */
+    .queue-badge {
+      color: #f0883e;
+      font-size: 10px;
+      margin-left: 6px;
+    }
+
+    /* Chart area */
+    .chart-area {
+      position: relative;
+      height: 38px;
+    }
+    .chart-area svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+  </style>
+</head>
+<body>
+<div id="container">
+  <div class="header">
+    <div class="title">TruckersMP 服务器状态</div>
+  </div>
+
+  <div class="server-list" id="server-list"></div>
+
+</div>
+
+<script>
+/**
+ * 构建 SVG 面积折线图
+ * maxPlayer 的 50% 作为余量，上限不超过 maxPlayer
+ */
+function buildChartSVG(data, width, height, maxPlayer) {
+  const padTop = 2;
+  const padBottom = 0;
+  const chartW = width;
+  const chartH = height - padTop - padBottom;
+
+  const dataMax = Math.max(...data, 1);
+  const max = Math.min(maxPlayer, maxPlayer * 0.12 + dataMax);
+  const step = chartW / (data.length - 1);
+
+  const points = data.map((v, i) => {
+    const x = i * step;
+    const y = padTop + chartH - (v / max) * chartH;
+    return [x, y];
+  });
+
+  const lineD = points.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
+  const areaD = lineD
+    + ` L${points[points.length - 1][0]},${padTop + chartH}`
+    + ` L${points[0][0]},${padTop + chartH} Z`;
+
+  const gid = 'g' + Math.random().toString(36).slice(2, 8);
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(79,139,255,0.4)"/>
+          <stop offset="100%" stop-color="rgba(79,139,255,0.02)"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaD}" fill="url(#${gid})"/>
+      <path d="${lineD}" fill="none" stroke="#4f8bff" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>`;
+}
+
+/**
+ * 将 playerHistory 标准化为 288 个点（24h，每5分钟一个点）
+ * 缺失的时间段填充为 0
+ * @param {Array<{updateTime: string, playerCount: number}>} playerHistory
+ */
+function normalizeHistory(playerHistory) {
+  const SLOT_COUNT = 288;
+  const SLOT_MS = 300000;
+
+  if (!playerHistory || playerHistory.length === 0) return [];
+
+  // API 返回的是北京时间(UTC+8)，用 Date.UTC 生成时间戳再减去8小时偏移
+  function parseTime(str) {
+    const [datePart, timePart] = str.trim().replace('T', ' ').split(' ');
+    const [y, m, d] = datePart.split('-').map(Number);
+    const parts = timePart.split(':').map(Number);
+    const h = parts[0] || 0, min = parts[1] || 0;
+    return Date.UTC(y, m - 1, d, h, min, 0) - 8 * 3600000;
+  }
+
+  const now = Date.now();
+  const currentSlot = Math.floor(now / SLOT_MS) * SLOT_MS;
+
+  const dataMap = {};
+  for (const item of playerHistory) {
+    const ts = parseTime(item.updateTime);
+    if (isNaN(ts)) continue;
+    const slot = Math.floor(ts / SLOT_MS) * SLOT_MS;
+    dataMap[slot] = item.playerCount;
+  }
+
+  const result = [];
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    const slotTime = currentSlot - (SLOT_COUNT - 1 - i) * SLOT_MS;
+    result.push(dataMap[slotTime] !== undefined ? dataMap[slotTime] : 0);
+  }
+
+  return result;
+}
+
+/**
+ * 渲染一个服务器卡片
+ */
+function createServerCard(server) {
+  const card = document.createElement('div');
+  card.className = 'server-card';
+
+  // 只展示存在的特性
+  let featuresHTML = '';
+  if (server.collisionsEnable === 1) {
+    featuresHTML += '<span class="feature">💥 碰撞</span>';
+  }
+  if (server.afkEnable === 0) {
+    featuresHTML += '<span class="feature">💤 挂机</span>';
+  }
+  if (server.policeCarEnable === 1) {
+    featuresHTML += '<span class="feature">🚓 警车</span>';
+  }
+  if (server.speedLimiterEnable === 1) {
+    featuresHTML += '<span class="feature">🐢 限速</span>';
+  }
+
+  // 队列
+  let queueText = '';
+  if (server.queueCount > 0) {
+    queueText = `<span class="queue-badge">队列 ${server.queueCount}</span>`;
+  }
+
+  card.innerHTML = `
+    <div class="server-info">
+      <div class="server-row">
+        <div class="server-left">
+          <span class="status-indicator ${server.isOnline === 1 ? 'online' : 'offline'}"></span>
+          <span class="server-name">${server.serverName}</span>
+        </div>
+        <span class="player-count"><span class="num">${server.playerCount}</span> / ${server.maxPlayer}${queueText}</span>
+      </div>
+      ${featuresHTML ? '<div class="features">' + featuresHTML + '</div>' : ''}
+    </div>
+    <div class="chart-area">
+      ${server.isOnline === 1 && server.playerHistory && server.playerHistory.length > 0
+        ? (() => {
+            const normalized = normalizeHistory(server.playerHistory);
+            return normalized.length > 0 ? buildChartSVG(normalized, 380, 38, server.maxPlayer) : '';
+          })()
+        : ''}
+    </div>`;
+
+  return card;
+}
+
+/**
+ * 主渲染函数
+ */
+function setData(apiData) {
+  if (!apiData || !apiData.data) return;
+
+  const servers = apiData.data;
+  const listEl = document.getElementById('server-list');
+
+  listEl.innerHTML = '';
+
+  servers.forEach(server => {
+    listEl.appendChild(createServerCard(server));
+  });
+}
+
+</script>
+</body>
+</html>

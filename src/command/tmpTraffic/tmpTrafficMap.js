@@ -102,7 +102,7 @@ module.exports = async (ctx, cfg, serverName) => {
             let page;
             try {
                 page = await ctx.puppeteer.page();
-                await page.setViewport({ width: 1000, height: 1000 });
+                await page.setViewport({ width: 1000, height: 1000, deviceScaleFactor: 2 });
                 await page.goto(`file:///${resolve(__dirname, '../../resource/traffic.html')}`);
                 await page.evaluate(`setData(${JSON.stringify(data)})`);
                 await common.sleep(100);

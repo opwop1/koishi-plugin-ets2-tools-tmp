@@ -10,7 +10,7 @@ const { MileageRankingType } = require('./util/constant');
 
 const commands = {
     tmpQuery: require('./command/tmpQuery/tmpQuery'),
-    tmpServer: require('./command/tmpServer'),
+    tmpServer: require('./command/tmpServer/tmpServer'),
     tmpBind: require('./command/tmpBind'),
     tmpTraffic: require('./command/tmpTraffic/tmpTraffic'),
     tmpPosition: require('./command/tmpPosition'),
@@ -101,6 +101,13 @@ exports.Config = koishi_1.Schema.intersect([
                 koishi_1.Schema.const(2).description('热力图')
             ]).default(1).description('路况信息展示方式'),
         }).description('路况查询配置'),
+        tmpServer: koishi_1.Schema.object({
+            type: koishi_1.Schema.union([
+                koishi_1.Schema.const(1).description('文字'),
+                koishi_1.Schema.const(2).description('图片')
+            ]).default(1).description('服务器信息展示方式'),
+        }).description('服务器查询配置'),
+
         tmpVersionCheck: koishi_1.Schema.object({
             checkInterval: koishi_1.Schema.number().description("版本检查间隔（分钟）").default(30),
             groups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("接收版本更新通知的群组ID列表").default([])
