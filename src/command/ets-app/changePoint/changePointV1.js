@@ -88,7 +88,10 @@ module.exports = async (ctx, cfg, session, target, changeType, quantity, reason)
             reason: reason
         };
         log(`[V1] 积分修改请求: ${changeUrl}, body: ${JSON.stringify(requestBody)}`);
-        const changeResponse = await ctx.http.post(changeUrl, requestBody, { timeout: 10000 });
+        const changeResponse = await ctx.http.post(changeUrl, requestBody, {
+            timeout: 10000,
+            headers: { "Content-Type": "application/json", token }
+        });
         log(`[V1] 积分修改响应: ${JSON.stringify(changeResponse)}`);
 
         if (changeResponse.code !== 0) {
