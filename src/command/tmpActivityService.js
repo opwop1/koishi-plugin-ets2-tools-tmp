@@ -4,6 +4,9 @@ exports.ActivityService = void 0;
 
 const koishi_1 = require("koishi");
 
+const v1Methods = require('./tmpActivityService/tmpActivityServiceV1');
+const v2Methods = require('./tmpActivityService/tmpActivityServiceV2');
+
 class ActivityService {
     constructor(ctx, config) {
         this.ctx = ctx;
@@ -14,6 +17,13 @@ class ActivityService {
         this.sentNoActivityNotification = false;
         this.timers = [];
         this.logger = this.initLogger();
+
+        const platformVersion = (this.cfg.mainSettings?.platformVersion || "v1").toLowerCase();
+        if (platformVersion === "v2") {
+            Object.assign(this, v2Methods);
+        } else {
+            Object.assign(this, v1Methods);
+        }
     }
 
     initLogger() {
@@ -212,63 +222,6 @@ class ActivityService {
             this.logger.debug(`今日活动数量: ${this.todayActivities.length}, TMP活动数量: ${this.todayTMPEvents.length}`);
         } catch (error) {
             this.logger.error("更新活动数据失败:", error.message);
-        }
-    }
-
-    async updateTodayActivities() {
-        try {
-            this.todayActivities = [];
-
-            const protocol = this.cfg.api.useHttps ? "https://" : "http://";
-            const fullUrl = `${protocol}${this.cfg.api.url}/api/activity/info/list?token=${this.cfg.api.token}&page=1&limit=100&themeName=`;
-            this.logger.api(`请求车队平台API: ${fullUrl.replace(this.cfg.api.token, "***")}`);
-
-            const startTime = Date.now();
-            const response = await this.ctx.http.get(fullUrl, { timeout: 10000 });
-            const duration = Date.now() - startTime;
-            this.logger.api(`车队平台API响应耗时: ${duration}ms, 状态码: ${response.code}`);
-
-            if (this.cfg.debug?.logApiResponses) {
-                this.logger.api("车队平台API响应详情:", {
-                    code: response.code,
-                    totalCount: response.data?.totalCount,
-                    listCount: response.data?.list?.length
-                });
-            }
-
-            if (response.code === 0 && response.data?.list) {
-                const now = new Date();
-                const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
-                this.logger.debug(`[活动更新] 当前本地日期: ${today}, UTC日期: ${new Date().toISOString().split("T")[0]}`);
-
-                const originalCount = response.data.list.length;
-                this.logger.debug(`[活动更新] API返回活动总数: ${originalCount}`);
-                if (this.cfg.debug?.debugMode && originalCount > 0) {
-                    const activityDates = response.data.list.map(a => `${a.themeName}: ${a.startTime?.split(" ")[0]}`);
-                    this.logger.debug(`[活动更新] 所有活动日期:`, activityDates);
-                }
-
-                this.todayActivities = response.data.list.filter((activity) => {
-                    const activityDate = activity.startTime?.split(" ")[0];
-                    const isToday = activityDate === today;
-                    if (!isToday && this.cfg.debug?.debugMode) {
-                        this.logger.debug(`[活动更新] 跳过非今日活动: ${activity.themeName}, 日期: ${activityDate}, 当前日期: ${today}`);
-                    }
-                    return isToday;
-                });
-
-                this.logger.info(`[活动更新] 从车队平台找到 ${this.todayActivities.length}/${originalCount} 个今日活动`);
-                if (this.cfg.debug?.debugMode && this.todayActivities.length > 0) {
-                    const todayActivityNames = this.todayActivities.map(a => `${a.themeName}: ${a.startTime}`);
-                    this.logger.debug(`[活动更新] 今日活动详情:`, todayActivityNames);
-                }
-            } else {
-                this.logger.error(`[活动更新] 车队平台API返回错误: ${response.msg || '未知错误'} (代码: ${response.code || '无'})`);
-                this.todayActivities = [];
-            }
-        } catch (error) {
-            this.logger.error("[活动更新] 获取车队平台活动列表失败:", error.message);
-            this.todayActivities = [];
         }
     }
 
@@ -603,19 +556,11 @@ class ActivityService {
 
         this.logger.debug(`开始检查 ${this.todayActivities.length} 个活动的自动打卡状态`);
 
-        const platformVersion = (this.cfg.mainSettings?.platformVersion || "v1").toLowerCase();
-
         for (const activity of this.todayActivities) {
             try {
-                let autoClockEnabled = false;
+                const autoClockEnabled = await this.checkAutoClock(activity);
 
-                if (platformVersion === "v1") {
-                    autoClockEnabled = await this.checkV1AutoClock(activity);
-                } else if (platformVersion === "v2") {
-                    autoClockEnabled = await this.checkV2AutoClock(activity);
-                }
-
-                const message = autoClockEnabled 
+                const message = autoClockEnabled
                     ? `今日活动自动打卡已设置`
                     : `请注意，今日活动打卡未设置。\n 活动名称： ${activity.themeName || '未知活动'}`;
 
@@ -632,58 +577,6 @@ class ActivityService {
             } catch (error) {
                 this.logger.error(`检查活动 "${activity.themeName || '未知活动'}" 自动打卡状态失败:`, error.message);
             }
-        }
-    }
-
-    async checkV1AutoClock(activity) {
-        try {
-            const protocol = this.cfg.api.useHttps ? "https://" : "http://";
-            const fullUrl = `${protocol}${this.cfg.api.url}/api/activity/info/info/${activity.id}?token=${this.cfg.api.token}`;
-            this.logger.api(`请求V1活动详情API: ${fullUrl.replace(this.cfg.api.token, "***")}`);
-
-            const response = await this.ctx.http.get(fullUrl, { timeout: 10000 });
-            this.logger.api(`V1活动详情API响应:`, response);
-
-            if (response.code === 0 && response.data) {
-                const enableAutoClock = response.data.enableAutoClock;
-                this.logger.debug(`活动 "${activity.themeName}" V1自动打卡状态: ${enableAutoClock}`);
-                return enableAutoClock === 1;
-            } else {
-                this.logger.error(`V1活动详情API返回错误: ${response.msg || '未知错误'} (代码: ${response.code || '无'})`);
-                return false;
-            }
-        } catch (error) {
-            this.logger.error(`检查V1活动 "${activity.themeName}" 自动打卡状态失败:`, error.message);
-            return false;
-        }
-    }
-
-    async checkV2AutoClock(activity) {
-        try {
-            const protocol = this.cfg.api.useHttps ? "https://" : "http://";
-            const fullUrl = `${protocol}${this.cfg.api.url}/activity/list?token=${this.cfg.api.token}`;
-            this.logger.api(`请求V2活动列表API: ${fullUrl.replace(this.cfg.api.token, "***")}`);
-
-            const response = await this.ctx.http.get(fullUrl, { timeout: 10000 });
-            this.logger.api(`V2活动列表API响应:`, response);
-
-            if (response.code === 200 && response.data?.rows) {
-                const activityDetail = response.data.rows.find(row => row.id === activity.id);
-                if (activityDetail) {
-                    const autoCheckInEnable = activityDetail.autoCheckInEnable;
-                    this.logger.debug(`活动 "${activity.themeName}" V2自动打卡状态: ${autoCheckInEnable}`);
-                    return autoCheckInEnable === 1;
-                } else {
-                    this.logger.warn(`在V2活动列表中未找到活动ID: ${activity.id}`);
-                    return false;
-                }
-            } else {
-                this.logger.error(`V2活动列表API返回错误: ${response.msg || '未知错误'} (代码: ${response.code || '无'})`);
-                return false;
-            }
-        } catch (error) {
-            this.logger.error(`检查V2活动 "${activity.themeName}" 自动打卡状态失败:`, error.message);
-            return false;
         }
     }
 
