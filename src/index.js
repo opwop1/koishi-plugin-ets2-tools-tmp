@@ -351,11 +351,11 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.changePoint) {
-        ctx.command(`积分修改 <target:string> <changeType:string> <quantity:string>`, "修改欧卡车队平台积分")
-            .usage("管理员专用。changeType: 增加 或 减少。target可输入UID或@群成员")
-            .example(`积分修改 @某人 增加 10 - 增加@某人10积分`)
-            .example(`积分修改 10000 减少 5 - 减少UID为10000的用户5积分`)
-            .action(async ({ session }, target, changeType, quantity) => await commands.changePoint(ctx, cfg, session, target, changeType, quantity));
+        ctx.command(`积分修改 <target:string> <changeType:string> <quantity:string> <reason:string>`, "修改欧卡车队平台积分")
+            .usage("管理员专用。changeType: 增加 或 减少。target可输入车队编号(V1)或UID(V2)或@群成员。reason为备注原因(V1必填)")
+            .example(`积分修改 @某人 增加 10 活动奖励 - 增加@某人10积分，备注活动奖励`)
+            .example(`积分修改 5 减少 5 违规扣分 - 减少车队编号5的用户5积分，备注违规扣分`)
+            .action(async ({ session }, target, changeType, quantity, reason) => await commands.changePoint(ctx, cfg, session, target, changeType, quantity, reason));
     }
 
     if (cfg.commands?.addMember) {
