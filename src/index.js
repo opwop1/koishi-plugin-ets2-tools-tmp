@@ -186,6 +186,11 @@ exports.Config = koishi_1.Schema.intersect([
                 time: koishi_1.Schema.string().description("今日无活动通知发送时间（HH:mm格式）").default("09:00"),
                 message: koishi_1.Schema.string().description("今日无活动通知消息").default("今日没活动")
             }).description("无活动通知配置"),
+            onlineCheck: koishi_1.Schema.object({
+                enable: koishi_1.Schema.boolean().description("启用今日有活动时的在线成员检查").default(false),
+                time: koishi_1.Schema.string().description("在线成员检查发送时间（HH:mm格式）").default("20:30"),
+                apiUrl: koishi_1.Schema.string().description("在线成员查询API地址（含vtcId参数）").default("https://www.cnly.top/api/player_online/api?vtcId=89225")
+            }).description("在线成员检查配置"),
             mainGroup: koishi_1.Schema.object({
                 groups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("主群群号列表").default([]),
                 activityReminderMessage: koishi_1.Schema.string().description("活动提醒消息模板，支持变量：{name}, {server}, {startingPoint}, {terminalPoint}, {distance}, {banner}, {timeLeft}").default("活动 {name} 还有 {timeLeft} 分钟就要开始啦!\n服务器: {server}\n起点: {startingPoint}\n终点: {terminalPoint}\n距离: {distance}KM"),

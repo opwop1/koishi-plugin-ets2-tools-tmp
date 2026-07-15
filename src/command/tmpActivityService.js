@@ -143,6 +143,14 @@ class ActivityService {
             }, `无活动通知定时器: ${this.cfg.noActivity.time}`);
         }
 
+        if (this.cfg.onlineCheck?.enable) {
+            const [onlineHours, onlineMinutes] = this.cfg.onlineCheck.time.split(":").map(Number);
+            this.setupTimer(onlineHours, onlineMinutes, () => {
+                this.logger.timing(`执行在线成员检查任务 (${this.cfg.onlineCheck.time})`);
+                this.checkAndSendOnlineMemberReport();
+            }, `在线成员检查定时器: ${this.cfg.onlineCheck.time}`);
+        }
+
         const minuteTimer = setInterval(async () => {
             await this.checkAndSendActivityReminders();
         }, koishi_1.Time.minute);
@@ -339,6 +347,60 @@ class ActivityService {
             this.logger.info(`检测到活动状态变化：之前无活动，现在有活动（车队平台: ${this.todayActivities.length}个, TMP: ${this.todayTMPEvents.length}个）`);
             this.sentNoActivityNotification = false;
             await this.checkAndSendProfileReminders();
+        }
+    }
+
+    async checkAndSendOnlineMemberReport(manualTest = false) {
+        try {
+            if (this.todayActivities.length === 0 && this.todayTMPEvents.length === 0) {
+                this.logger.info(`[在线成员检查] 今日无活动，跳过在线成员检查`);
+                return;
+            }
+
+            const apiUrl = this.cfg.onlineCheck?.apiUrl;
+            if (!apiUrl) {
+                this.logger.error(`[在线成员检查] 未配置API地址`);
+                return;
+            }
+
+            this.logger.api(`[在线成员检查] 请求在线成员API: ${apiUrl}`);
+            const startTime = Date.now();
+            const response = await this.ctx.http.get(apiUrl, { timeout: 10000 });
+            const duration = Date.now() - startTime;
+            this.logger.api(`[在线成员检查] API响应耗时: ${duration}ms, code: ${response.code}`);
+
+            if (response.code !== 200 || !Array.isArray(response.data)) {
+                this.logger.error(`[在线成员检查] API返回错误: ${response.msg || '未知错误'} (code: ${response.code})`);
+                return;
+            }
+
+            const onlineMembers = response.data.filter(member => member.isOnline === true);
+            this.logger.info(`[在线成员检查] 总成员数: ${response.data.length}, 在线成员数: ${onlineMembers.length}`);
+
+            if (onlineMembers.length === 0) {
+                this.logger.info(`[在线成员检查] 当前无在线成员`);
+                return;
+            }
+
+            let message = `🎮 今日活动在线成员 (${onlineMembers.length}人)\n`;
+            message += `━━━━━━━━━━━━━━━━\n`;
+            onlineMembers.forEach((member, index) => {
+                message += `${index + 1}. ${member.name}\n`;
+                message += `   TMP ID: ${member.tmpId}\n`;
+                message += `   服务器: ${member.serverName || '未知'}\n`;
+                message += `   更新时间: ${member.updateTime || '未知'}\n`;
+            });
+
+            for (const groupId of this.cfg.admin.groups) {
+                try {
+                    await this.sendToGroup(groupId, message, "管理群组");
+                    this.logger.message(`[在线成员检查] 已发送在线成员报告到管理群组 ${groupId}`);
+                } catch (error) {
+                    this.logger.error(`[在线成员检查] 发送到管理群组 ${groupId} 失败:`, error.message);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`[在线成员检查] 失败:`, error.message);
         }
     }
 
