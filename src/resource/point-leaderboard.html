@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>积分排行榜</title>
+  <style>
+    @font-face {
+      font-family: 'segui-emj';
+      src: url('./package/SEGUIEMJ.TTF');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'segui-emj', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+    }
+
+    #container {
+      width: 520px;
+      background: linear-gradient(160deg, #1a0b2e 0%, #16213e 35%, #0f3460 70%, #1a0b2e 100%);
+      padding: 0 0 20px 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    /* 装饰性背景光晕 */
+    #container::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: -100px;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    #container::after {
+      content: '';
+      position: absolute;
+      bottom: -100px;
+      right: -100px;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header {
+      padding: 28px 24px 20px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-icon {
+      font-size: 36px;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
+    }
+
+    .header-title {
+      color: transparent;
+      background: linear-gradient(135deg, #ffd700 0%, #ffaa00 50%, #ff6b35 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+      margin: 0;
+    }
+
+    .header-subtitle {
+      color: #a8b2c8;
+      font-size: 12px;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
+    .header-decoration {
+      width: 80px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ffd700, transparent);
+      margin: 12px auto 0;
+    }
+
+    /* 前三名特殊区域 */
+    .top3-container {
+      padding: 8px 20px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .top3-item {
+      flex: 1;
+      max-width: 145px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border-radius: 12px;
+      padding: 16px 8px 12px;
+      text-align: center;
+      position: relative;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .top3-item.rank-1 {
+      background: linear-gradient(180deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 165, 0, 0.1) 100%);
+      border-color: rgba(255, 215, 0, 0.5);
+      box-shadow: 0 0 24px rgba(255, 215, 0, 0.4), inset 0 0 12px rgba(255, 215, 0, 0.1);
+      transform: translateY(-12px);
+      order: 2;
+    }
+
+    .top3-item.rank-2 {
+      background: linear-gradient(180deg, rgba(192, 192, 192, 0.2) 0%, rgba(150, 150, 150, 0.08) 100%);
+      border-color: rgba(192, 192, 192, 0.4);
+      box-shadow: 0 0 16px rgba(192, 192, 192, 0.3);
+      order: 1;
+    }
+
+    .top3-item.rank-3 {
+      background: linear-gradient(180deg, rgba(205, 127, 50, 0.2) 0%, rgba(160, 100, 40, 0.08) 100%);
+      border-color: rgba(205, 127, 50, 0.4);
+      box-shadow: 0 0 16px rgba(205, 127, 50, 0.3);
+      order: 3;
+    }
+
+    .crown {
+      font-size: 22px;
+      margin-bottom: 4px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .rank-1 .crown { font-size: 28px; }
+
+    .top3-rank-num {
+      font-size: 32px;
+      font-weight: 900;
+      color: #ffffff;
+      margin: 4px 0;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      line-height: 1;
+    }
+
+    .rank-1 .top3-rank-num { color: #ffd700; text-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+    .rank-2 .top3-rank-num { color: #e0e0e0; text-shadow: 0 0 8px rgba(192, 192, 192, 0.6); }
+    .rank-3 .top3-rank-num { color: #cd7f32; text-shadow: 0 0 8px rgba(205, 127, 50, 0.6); }
+
+    .top3-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      margin: 8px auto;
+      display: block;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      object-fit: cover;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .rank-1 .top3-avatar { width: 64px; height: 64px; border-color: rgba(255, 215, 0, 0.6); }
+
+    .top3-name {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      margin: 6px 0 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+    }
+
+    .top3-teamid {
+      color: #a8b2c8;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+
+    .top3-teamid span {
+      color: #ffd700;
+      font-weight: 600;
+    }
+
+    .top3-points {
+      color: #ffd700;
+      font-size: 14px;
+      font-weight: 800;
+      text-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+    }
+
+    .rank-2 .top3-points { color: #e0e0e0; text-shadow: 0 0 6px rgba(192, 192, 192, 0.4); }
+    .rank-3 .top3-points { color: #cd7f32; text-shadow: 0 0 6px rgba(205, 127, 50, 0.4); }
+
+    .top3-points-label {
+      color: #888;
+      font-size: 10px;
+      margin-left: 2px;
+    }
+
+    /* 第4-10名列表 */
+    .rank-list {
+      padding: 0 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .rank-list-title {
+      color: #a8b2c8;
+      font-size: 12px;
+      text-align: center;
+      margin: 16px 0 12px;
+      letter-spacing: 2px;
+      position: relative;
+    }
+
+    .rank-list-title::before,
+    .rank-list-title::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    }
+
+    .rank-list-title::before { left: 80px; }
+    .rank-list-title::after { right: 80px; }
+
+    .rank-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .rank-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .rank-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      margin-right: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    .rank-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      margin-right: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      object-fit: cover;
+      background: rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+    }
+
+    .rank-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .rank-name {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .rank-tmpid {
+      color: #666;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .rank-tmpid .team-id {
+      color: #ffd700;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+
+    .rank-points {
+      color: #ffd700;
+      font-size: 16px;
+      font-weight: 800;
+      text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .rank-points-label {
+      color: #888;
+      font-size: 10px;
+      margin-left: 2px;
+    }
+
+    /* 底部信息 */
+    .footer {
+      margin-top: 20px;
+      padding: 12px 20px 0;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-total {
+      color: #a8b2c8;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .footer-total span {
+      color: #ffd700;
+      font-weight: 700;
+    }
+
+    .footer-update {
+      color: #555;
+      font-size: 10px;
+    }
+
+    /* 当前用户排名区域 */
+    .current-player-section {
+      margin: 16px 20px 0;
+      padding: 14px 16px;
+      background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.08) 100%);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+      position: relative;
+      z-index: 1;
+    }
+
+    .current-player-title {
+      color: #ffd700;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+
+    .current-player-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .current-player-rank {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffd700, #ff8c00);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a0b2e;
+      font-size: 16px;
+      font-weight: 800;
+      flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+    }
+
+    .current-player-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .current-player-name {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .current-player-meta {
+      color: #a8b2c8;
+      font-size: 11px;
+      margin-top: 3px;
+    }
+
+    .current-player-meta .team-id {
+      color: #ffd700;
+      margin-left: 6px;
+    }
+
+    .current-player-points {
+      color: #ffd700;
+      font-size: 18px;
+      font-weight: 800;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .current-player-points-label {
+      color: #888;
+      font-size: 11px;
+      margin-left: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="header">
+      <div class="header-icon">🏆</div>
+      <h1 class="header-title">积 分 排 行 榜</h1>
+      <div class="header-subtitle">POINTS LEADERBOARD</div>
+      <div class="header-decoration"></div>
+    </div>
+
+    <!-- 前三名展示 -->
+    <div class="top3-container" id="top3"></div>
+
+    <!-- 第4-10名列表 -->
+    <div class="rank-list" id="rankList" style="display:none;">
+      <div class="rank-list-title">— 其他排名 —</div>
+      <div id="rankListContent"></div>
+    </div>
+
+    <!-- 当前用户排名 -->
+    <div class="current-player-section" id="currentPlayerSection" style="display:none;">
+      <div class="current-player-title">— 你的排名 —</div>
+      <div class="current-player-content" id="currentPlayerContent"></div>
+    </div>
+
+    <!-- 底部信息 -->
+    <div class="footer">
+      <div class="footer-total">总成员数: <span id="totalCount">0</span> 人</div>
+      <div class="footer-update">数据更新时间: <span id="updateTime">-</span></div>
+    </div>
+  </div>
+
+  <script>
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function createAvatarHtml(player, sizeClass) {
+      if (!player.avatarUrl) {
+        return `<div class="${sizeClass}" style="display:flex; align-items:center; justify-content:center; color:#888;">${escapeHtml(player.tmpName.charAt(0))}</div>`;
+      }
+      return `<img class="${sizeClass}" src="${escapeHtml(player.avatarUrl)}" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.parentElement.querySelector('.avatar-fallback').style.display='flex';">
+              <div class="${sizeClass} avatar-fallback" style="display:none; align-items:center; justify-content:center; color:#888;">${escapeHtml(player.tmpName.charAt(0))}</div>`;
+    }
+
+    function createTop3Item(player) {
+      const item = document.createElement('div');
+      const rankClass = `rank-${player.rank}`;
+      item.className = `top3-item ${rankClass}`;
+
+      const crowns = { 1: '👑', 2: '🥈', 3: '🥉' };
+
+      item.innerHTML = `
+        <div class="crown">${crowns[player.rank]}</div>
+        <div class="top3-rank-num">${player.rank}</div>
+        <div class="avatar-wrapper">${createAvatarHtml(player, 'top3-avatar')}</div>
+        <div class="top3-name">${escapeHtml(player.tmpName)}</div>
+        <div class="top3-teamid">车队编号: <span>#${escapeHtml(player.teamId)}</span></div>
+        <div class="top3-points">${player.rewardPoints.toLocaleString()}<span class="top3-points-label">分</span></div>
+      `;
+      return item;
+    }
+
+    function createRankItem(player) {
+      const item = document.createElement('div');
+      item.className = 'rank-item';
+
+      item.innerHTML = `
+        <div class="rank-num">${player.rank}</div>
+        <div class="avatar-wrapper">${createAvatarHtml(player, 'rank-avatar')}</div>
+        <div class="rank-info">
+          <div class="rank-name">${escapeHtml(player.tmpName)}</div>
+          <div class="rank-tmpid">TMP: ${escapeHtml(player.tmpId)}<span class="team-id">车队 #${escapeHtml(player.teamId)}</span></div>
+        </div>
+        <div class="rank-points">${player.rewardPoints.toLocaleString()}<span class="rank-points-label">分</span></div>
+      `;
+      return item;
+    }
+
+    function createCurrentPlayerItem(player) {
+      const content = document.createElement('div');
+      content.className = 'current-player-content';
+
+      content.innerHTML = `
+        <div class="current-player-rank">#${player.rank}</div>
+        <div class="current-player-info">
+          <div class="current-player-name">${escapeHtml(player.tmpName)}</div>
+          <div class="current-player-meta">TMP: ${escapeHtml(player.tmpId)}<span class="team-id">车队 #${escapeHtml(player.teamId)}</span></div>
+        </div>
+        <div class="current-player-points">${player.rewardPoints.toLocaleString()}<span class="current-player-points-label">分</span></div>
+      `;
+      return content;
+    }
+
+    function setData(data) {
+      if (!data || !data.top10 || !Array.isArray(data.top10)) {
+        console.error('数据无效');
+        return;
+      }
+
+      const top3Container = document.getElementById('top3');
+      const rankList = document.getElementById('rankList');
+      const rankListContent = document.getElementById('rankListContent');
+      const currentPlayerSection = document.getElementById('currentPlayerSection');
+      const currentPlayerContent = document.getElementById('currentPlayerContent');
+      const totalCountEl = document.getElementById('totalCount');
+      const updateTimeEl = document.getElementById('updateTime');
+
+      top3Container.innerHTML = '';
+      rankListContent.innerHTML = '';
+      currentPlayerContent.innerHTML = '';
+
+      // 渲染前三名
+      const top3 = data.top10.slice(0, 3);
+      top3.forEach(player => {
+        top3Container.appendChild(createTop3Item(player));
+      });
+
+      // 渲染第4-10名
+      const rest = data.top10.slice(3);
+      if (rest.length > 0) {
+        rankList.style.display = 'block';
+        rest.forEach(player => {
+          rankListContent.appendChild(createRankItem(player));
+        });
+      } else {
+        rankList.style.display = 'none';
+      }
+
+      // 渲染当前用户排名（仅在找到用户数据时显示）
+      if (data.currentPlayer && data.currentPlayer.rank) {
+        currentPlayerSection.style.display = 'block';
+        currentPlayerContent.appendChild(createCurrentPlayerItem(data.currentPlayer));
+      } else {
+        currentPlayerSection.style.display = 'none';
+      }
+
+      // 底部信息
+      if (totalCountEl) totalCountEl.textContent = (data.totalCount || 0).toLocaleString();
+      if (updateTimeEl) updateTimeEl.textContent = data.updateTime || '-';
+    }
+  </script>
+</body>
+</html>

@@ -21,6 +21,7 @@ const commands = {
     queryPoint: require('./command/ets-app/queryPoint/queryPoint'),
     changePoint: require('./command/ets-app/changePoint/changePoint'),
     addMember: require('./command/ets-app/addMember/addMemberV2'),
+    pointRanking: require('./command/ets-app/pointRanking/pointRanking'),
     tmpVtc: require('./command/tmpVtc'),
     tmpFootprint: require('./command/tmpFootprint')
 };
@@ -75,6 +76,7 @@ exports.Config = koishi_1.Schema.intersect([
             tmpVersion: koishi_1.Schema.boolean().default(true).description('是否启用版本查询'),
             tmpDlcMap: koishi_1.Schema.boolean().default(true).description('是否启用DLC地图查询'),
             tmpMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用里程排行榜'),
+            pointRanking: koishi_1.Schema.boolean().default(false).description('是否启用积分排行榜'),
             tmpVtc: koishi_1.Schema.boolean().default(true).description('是否启用VTC查询'),
             tmpFootprint: koishi_1.Schema.boolean().default(true).description('是否启用足迹查询'),
             mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
@@ -189,7 +191,7 @@ exports.Config = koishi_1.Schema.intersect([
             onlineCheck: koishi_1.Schema.object({
                 enable: koishi_1.Schema.boolean().description("启用今日有活动时的在线成员检查").default(false),
                 time: koishi_1.Schema.string().description("在线成员检查发送时间（HH:mm格式）").default("20:30"),
-                apiUrl: koishi_1.Schema.string().description("在线成员查询API地址（含vtcId参数）").default("https://www.cnly.top/api/player_online/api?vtcId=89225")
+                apiUrl: koishi_1.Schema.string().description("在线成员查询API地址（含vtcId参数）")
             }).description("在线成员检查配置"),
             mainGroup: koishi_1.Schema.object({
                 groups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("主群群号列表").default([]),
@@ -220,6 +222,7 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'tmpVersion', label: 'tmp版本' },
         { key: 'tmpDlcMap', label: '地图dlc价格' },
         { key: 'tmpMileageRanking', label: '里程排行榜/今日里程排行榜' },
+        { key: 'pointRanking', label: '积分排行榜' },
         { key: 'tmpVtc', label: 'vtc查询' },
         { key: 'tmpFootprint', label: '足迹查询' },
         { key: 'resetPassword', label: '重置密码' },
@@ -292,6 +295,12 @@ function registerBaseCommands(ctx, cfg) {
         ctx.command('今日里程排行榜')
             .usage("查询欧洲卡车模拟2今日里程排行榜")
             .action(async ({ session }) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.today));
+    }
+
+    if (cfg.commands?.pointRanking) {
+        ctx.command('积分排行')
+            .usage("查询车队积分排行榜（仅限总群和管理群使用）")
+            .action(async ({ session }) => await commands.pointRanking(ctx, cfg, session));
     }
 
     if (cfg.commands?.tmpVtc) {
