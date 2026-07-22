@@ -57,15 +57,25 @@ module.exports = {
 
             if (response.code === 0 && response.data) {
                 const enableAutoClock = response.data.enableAutoClock;
-                this.logger.debug(`活动 "${activity.themeName}" V1自动打卡状态: ${enableAutoClock}`);
-                return enableAutoClock === 1;
+                const serverId = response.data.serverId;
+                this.logger.debug(`活动 "${activity.themeName}" V1自动打卡状态: ${enableAutoClock}, serverId: ${serverId}`);
+
+                if (enableAutoClock === 1) {
+                    if (serverId != null) {
+                        return { status: 'set', message: '今日活动自动打卡已设置' };
+                    } else {
+                        return { status: 'no_server', message: '今日活动打卡服务器未设置' };
+                    }
+                } else {
+                    return { status: 'not_set', message: '今日活动打卡未设置' };
+                }
             } else {
                 this.logger.error(`V1活动详情API返回错误: ${response.msg || '未知错误'} (代码: ${response.code || '无'})`);
-                return false;
+                return { status: 'not_set', message: '今日活动打卡未设置' };
             }
         } catch (error) {
             this.logger.error(`检查V1活动 "${activity.themeName}" 自动打卡状态失败:`, error.message);
-            return false;
+            return { status: 'not_set', message: '今日活动打卡未设置' };
         }
     }
 };

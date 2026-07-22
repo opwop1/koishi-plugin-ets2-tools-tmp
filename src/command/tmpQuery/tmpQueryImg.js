@@ -1,4 +1,6 @@
 const dayjs = require('dayjs');
+const dayjsRelativeTime = require('dayjs/plugin/relativeTime');
+const dayjsLocaleZhCn = require('dayjs/locale/zh-cn');
 const guildBind = require('../../database/guildBind');
 const truckyAppApi = require('../../api/truckyAppApi');
 const evmOpenApi = require('../../api/evmOpenApi');
@@ -6,6 +8,8 @@ const baiduTranslate = require('../../util/baiduTranslate');
 const { resolve } = require("path");
 const common = require("../../util/common");
 const { segment } = require("koishi");
+dayjs.extend(dayjsRelativeTime);
+dayjs.locale(dayjsLocaleZhCn);
 /**
  * 用户组
  */
@@ -21,6 +25,7 @@ const userGroup = {
  * 查询玩家信息
  */
 module.exports = async (ctx, cfg, session, tmpId) => {
+    const { vtcId } = cfg.tmpActivityService?.api || {};
     if (!ctx.puppeteer) {
         return '未启用 puppeteer 服务';
     }
@@ -50,27 +55,36 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     data.tmpId = playerInfo.data.tmpId;
     data.name = playerInfo.data.name;
     data.steamId = playerInfo.data.steamId;
-    data.registerDate = dayjs(playerInfo.data.registerTime).format('YYYY年MM月DD日');
+    let registerDate = dayjs(playerInfo.data.registerTime);
+    data.registerDate = registerDate.format('YYYY年MM月DD日');
+    data.registerDays = dayjs().diff(registerDate, 'day');
     data.avatarUrl = playerInfo.data.avatarUrl;
     data.groupColor = playerInfo.data.groupColor;
     data.groupName = (userGroup[playerInfo.data.groupName] || playerInfo.data.groupName);
     data.isJoinVtc = playerInfo.data.isJoinVtc;
     data.vtcName = playerInfo.data.vtcName;
     data.vtcRole = playerInfo.data.vtcRole;
+    data.vtcHistory = playerInfo.data.vtcHistory || [];
     data.isSponsor = playerInfo.data.isSponsor;
     data.sponsorAmount = playerInfo.data.sponsorAmount;
     data.sponsorCumulativeAmount = playerInfo.data.sponsorCumulativeAmount;
     data.sponsorHide = playerInfo.data.sponsorHide;
+    data.mileage = playerInfo.data.mileage;
+    data.todayMileage = playerInfo.data.todayMileage;
     data.isOnline = false;
+    data.onlineStatus = '离线';
     if (playerMapInfo && !playerMapInfo.error) {
         data.isOnline = playerMapInfo.data.online;
         if (data.isOnline) {
+            data.onlineStatus = '在线';
             data.onlineServerName = playerMapInfo.data.serverDetails.name;
             data.onlineCountry = await baiduTranslate(ctx, cfg, playerMapInfo.data.location.poi.country);
             data.onlineCity = await baiduTranslate(ctx, cfg, playerMapInfo.data.location.poi.realName);
             data.onlineX = playerMapInfo.data.x;
             data.onlineY = playerMapInfo.data.y;
             data.onlineMapType = playerMapInfo.data.serverDetails.id === 50 ? 'promods' : 'ets';
+        } else if (playerInfo.data.lastOnlineTime) {
+            data.lastOnlineTime = dayjs(playerInfo.data.lastOnlineTime).fromNow(false);
         }
     }
     data.isBan = playerInfo.data.isBan;
@@ -79,10 +93,86 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     data.banReasonZh = playerInfo.data.banReasonZh;
     data.banCount = playerInfo.data.banCount;
     data.banHide = playerInfo.data.banHide;
+    // 查询VTC积分（仅主群/管理群显示）
+    data.rewardPoints = 0;
+    if (playerInfo.data.isJoinVtc && cfg.commands?.mainSettings) {
+        const mainGroups = cfg.tmpActivityService?.mainGroup?.groups || [];
+        const adminGroups = cfg.tmpActivityService?.admin?.groups || [];
+        const allowedGroups = [...new Set([...mainGroups, ...adminGroups])];
+        const currentGroupId = session.channelId || '';
+        const isInAllowedGroup = allowedGroups.some(g => currentGroupId.includes(g));
+
+        if (isInAllowedGroup && playerInfo.data.vtcId == vtcId) {
+            const { url, token, logOutput, platformVersion } = cfg.mainSettings?.settings || {};
+            const platform = (platformVersion || "v1").toLowerCase();
+            try {
+                if (platform === "v2") {
+                    const baseUrl = url;
+                    const userInfoUrl = `https://${baseUrl}/members/get?token=${token}&tmpId=${tmpId}`;
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] tmpQueryImg：开始查询TmpID ${tmpId} 的V2.0积分`);
+                        ctx.logger.info(`[TMP_BOT] 请求V2.0用户信息: ${userInfoUrl}`);
+                    }
+                    const userInfoResponse = await ctx.http.get(userInfoUrl);
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] V2.0用户信息响应: ${JSON.stringify(userInfoResponse)}`);
+                    }
+                    if (userInfoResponse.code === 200 && userInfoResponse.data) {
+                        data.rewardPoints = userInfoResponse.data.point || 0;
+                    }
+                } else {
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] tmpQueryImg：开始查询TmpID ${tmpId} 的V1.0积分`);
+                    }
+                    const userInfoUrl = `https://${url}/api/user/info/list?token=${token}&page=0&limit=7&tmpId=${tmpId}&tmpName=&teamId=&qq=&state=0&teamRole=`;
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] 请求V1.0用户信息: ${userInfoUrl}`);
+                    }
+                    const userInfoResponse = await ctx.http.post(userInfoUrl);
+                    if (logOutput) {
+                        ctx.logger.info(`[TMP_BOT] V1.0用户信息响应: ${JSON.stringify(userInfoResponse)}`);
+                    }
+                    const userList = userInfoResponse.page?.list || [];
+                    const userInfo = userList[0];
+                    data.rewardPoints = userInfo.rewardPoints || 0;
+                }
+            } catch (error) {
+                ctx.logger.error(`积分查询过程出错: ${error}`);
+            }
+        }
+    }
+    // 查询Steam游戏时长
+    data.ets2GameTime = null;
+    data.atsGameTime = null;
+    if (cfg.commands?.tmpQueryGameTime) {
+        try {
+            const steamApiKey = cfg.steamApi?.key;
+            if (steamApiKey) {
+                const steamId = playerInfo.data.steamId;
+                const url = `https://api.114512.xyz/steam/IPlayerService/GetOwnedGames/v1?key=${steamApiKey}&steamid=${steamId}&appids_filter[0]=227300&appids_filter[1]=270880&include_played_free_games=1`;
+                const response = await ctx.http.get(url);
+                if (response.response && response.response.game_count > 0) {
+                    for (const game of response.response.games) {
+                        const playtimeMinutes = game.playtime_forever;
+                        const hours = Math.floor(playtimeMinutes / 60);
+                        const minutes = playtimeMinutes % 60;
+                        const playtime = `${hours}小时${minutes}分钟`;
+                        if (game.appid === 227300) {
+                            data.ets2GameTime = playtime;
+                        } else if (game.appid === 270880) {
+                            data.atsGameTime = playtime;
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            ctx.logger.error(`查询Steam游戏时长出错: ${error}`);
+        }
+    }
     let page;
     try {
         page = await ctx.puppeteer.page();
-        await page.setViewport({ width: 1000, height: 1000 });
+        await page.setViewport({ width: 520, height: 1000 });
         await page.goto(`file:///${resolve(__dirname, '../../resource/query.html')}`);
         await page.evaluate(`init(${JSON.stringify(data)})`);
         await common.sleep(100);

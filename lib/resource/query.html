@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Title</title>
+  <title>Player Info Card</title>
   <link href="./package/leaflet/leaflet.min.css" rel="stylesheet">
   <script src="./package/leaflet/leaflet.min.js"></script>
   <style>
@@ -12,350 +12,757 @@
       font-weight: normal;
       font-style: normal;
     }
-    body {
-      font-family: 'segui-emj', 'sans-serif';
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
-    .border {
-      border: 1px solid red;
+    body {
+      font-family: 'segui-emj', 'Segoe UI', -apple-system, sans-serif;
+      background: #080c20;
+      -webkit-font-smoothing: antialiased;
     }
 
     #container {
-      padding-bottom: 16px;
+      width: 480px;
+      background: linear-gradient(160deg, #0a0e27 0%, #151338 30%, #0d1a3a 60%, #080c20 100%);
+      padding: 0 0 16px;
+      overflow: hidden;
+      position: relative;
     }
 
-    .form-box {
+    /* Ambient glow orbs */
+    .ambient-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(60px);
+      z-index: 0;
+    }
+
+    .ambient-orb.orb1 {
+      top: -40px;
+      right: -30px;
+      width: 180px;
+      height: 180px;
+      background: rgba(99, 102, 241, 0.18);
+    }
+
+    .ambient-orb.orb2 {
+      top: 200px;
+      left: -50px;
+      width: 140px;
+      height: 140px;
+      background: rgba(168, 85, 247, 0.12);
+    }
+
+    .ambient-orb.orb3 {
+      bottom: 80px;
+      right: -20px;
+      width: 120px;
+      height: 120px;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      padding: 24px 24px 18px;
       display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(139, 92, 246, 0.5);
+      box-shadow:
+        0 0 20px rgba(139, 92, 246, 0.35),
+        0 0 40px rgba(139, 92, 246, 0.15),
+        inset 0 0 12px rgba(139, 92, 246, 0.1);
+      object-fit: cover;
+    }
+
+    .online-dot {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2.5px solid #0a0e27;
+      z-index: 2;
+    }
+
+    .online-dot.online {
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    }
+
+    .online-dot.offline {
+      background: #6b7280;
+    }
+
+    .header-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .player-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f0f0ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+
+    .player-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
       flex-wrap: wrap;
     }
-    .form-box .form-item {
-      width: 50%;
-    }
-    .form-box .form-item.full {
-      width: 100%;
+
+    .tmp-id {
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 500;
     }
 
-    #container {
-      width: 400px;
-      background: linear-gradient(135deg, #1f2f54, #0f2c2a);
+    .group-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      letter-spacing: 0.3px;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    .status-badge.online {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-badge.offline {
+      background: rgba(107, 114, 128, 0.2);
+      color: #9ca3af;
+      border: 1px solid rgba(107, 114, 128, 0.3);
+    }
+
+    /* ===== GLASS SECTIONS ===== */
+    .section {
+      margin: 10px 16px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px 16px;
+      backdrop-filter: blur(20px) saturate(1.2);
+      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      position: relative;
+      z-index: 1;
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.15),
+        0 1px 2px rgba(255, 255, 255, 0.05) inset;
       overflow: hidden;
     }
 
-    .header {
-      height: 100px;
-      background-color: rgba(0, 0, 0, .1);
+    /* Glass highlight on top */
+    .section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 5%, rgba(255, 255, 255, 0.12) 50%, transparent 95%);
+      z-index: 2;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #c4b5fd;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
-      padding: 0 26px;
-      box-shadow: 0 0 16px rgba(0, 0, 0, .4);
+      gap: 6px;
+      position: relative;
+      z-index: 1;
     }
-    .header .avatar {
-      width: 64px;
-      height: 64px;
-    }
-    .header .info {
+
+    .section-title::after {
+      content: '';
       flex: 1;
-      padding-left: 16px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.05), transparent);
+      margin-left: 8px;
     }
-    .header .info .name {
-      color: #b0c7ff;
-      font-size: 18px;
+
+    /* ===== INFO ROWS ===== */
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .info-row + .info-row {
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .info-label {
+      font-size: 13px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .info-value {
+      font-size: 13px;
+      color: #e2e8f0;
+      text-align: right;
+      word-break: break-all;
+      max-width: 60%;
+    }
+
+    .info-value.gold {
+      color: #fbbf24;
       font-weight: 600;
+      text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
     }
-    .header .info .tmp-id {
-      color: #aaaaaa;
-      font-size: 14px;
-      margin-top: 4px;
+
+    .info-value.green {
+      color: #4ade80;
     }
-    .header .info .group {
-      color: #ffffff;
+
+    .info-value.red {
+      color: #f87171;
+    }
+
+    .info-value.dim {
+      color: #6b7280;
       font-size: 12px;
-      padding: 2px 4px;
-      margin-left: 6px;
-      border-radius: 4px;
-      text-shadow: 0 4px 4px rgba(0, 0, 0, 0.8),
-                    0 -4px 4px rgba(0, 0, 0, 0.8);
     }
 
-    .details-container {
-      padding: 16px 20px 0 20px;
-    }
-    .details-container .form-item {
-      background-color: rgba(0, 0, 0, 0.2);
-      box-sizing: border-box;
-    }
-    .details-container .form-item:nth-child(1) {
-      margin-top: 0;
-    }
-    .details-container .form-item .label {
-      color: #dddddd;
-      background-color: rgba(0, 0, 0, 0.2);
-      padding: 4px 8px;
-    }
-    .details-container .form-item .value {
-      color: #ffffff;
-      padding: 4px 8px;
+    /* ===== VTC HISTORY ===== */
+    .vtc-history-item {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 1;
     }
 
-    .ban-container {
-      margin: 16px 20px 0 20px;
-      background-color: rgba(227, 92, 92, 0.3);
+    .vtc-history-item + .vtc-history-item {
+      margin-top: 6px;
     }
-    .ban-header {
-      width: 100%;
-      height: 30px;
-      box-sizing: border-box;
-      padding: 0 12px;
-      color: #ffffff;
-      font-size: 14px;
-      line-height: 30px;
-      background-color: rgba(227, 92, 92, 0.6);
+
+    .vtc-history-name {
+      font-size: 13px;
+      color: #fbbf24;
+      font-weight: 600;
+      margin-bottom: 4px;
     }
-    .ban-body {
-      padding: 12px 16px;
+
+    .vtc-history-dates {
+      font-size: 11px;
+      color: #64748b;
     }
-    .ban-body .ban-hidden {
-      color: #cccccc;
-      font-size: 14px;
+
+    /* ===== BAN SECTION ===== */
+    .section.ban-section {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.03) 100%);
+      border-color: rgba(239, 68, 68, 0.15);
+    }
+
+    .section.ban-section .section-title {
+      color: #f87171;
+    }
+
+    .section.ban-section .section-title::after {
+      background: linear-gradient(90deg, rgba(248, 113, 113, 0.4), rgba(248, 113, 113, 0.05), transparent);
+    }
+
+    .ban-hidden-text {
+      color: #6b7280;
+      font-size: 13px;
       font-style: italic;
       text-align: center;
-    }
-    .ban-body .form-item {
-      margin-top: 8px;
-    }
-    .ban-body .form-item:nth-child(1),
-    .ban-body .form-item:nth-child(2) {
-      margin-top: 0;
-    }
-    .ban-body .form-item .label {
-      color: #f3f3f3;
-      font-size: 12px;
-    }
-    .ban-body .form-item .value {
-      color: #eeeeee;
-      font-size: 14px;
-      word-wrap: break-word;
-      word-break: break-all;
+      padding: 4px 0;
     }
 
-    .position-container {
-      margin: 16px 20px;
+    /* ===== MAP SECTION ===== */
+    .section.map-section {
+      padding: 0;
+      overflow: hidden;
     }
-    .position-container .position-header {
+
+    .map-section .section-title {
+      padding: 14px 16px 0;
+      margin-bottom: 10px;
+    }
+
+    .map-section #map {
       width: 100%;
-      height: 30px;
-      box-sizing: border-box;
-      padding: 0 12px;
-      color: #ffffff;
+      height: 180px;
+      border-radius: 0 0 16px 16px;
+    }
+
+    /* ===== SPONSOR SECTION ===== */
+    .section.sponsor-section {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.08) 0%, rgba(250, 204, 21, 0.02) 100%);
+      border-color: rgba(250, 204, 21, 0.15);
+    }
+
+    .section.sponsor-section .section-title {
+      color: #facc15;
+    }
+
+    .section.sponsor-section .section-title::after {
+      background: linear-gradient(90deg, rgba(250, 204, 21, 0.4), rgba(250, 204, 21, 0.05), transparent);
+    }
+
+    /* ===== GAME TIME SECTION ===== */
+    .section.game-section {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
+      border-color: rgba(59, 130, 246, 0.15);
+    }
+
+    .section.game-section .section-title {
+      color: #60a5fa;
+    }
+
+    .section.game-section .section-title::after {
+      background: linear-gradient(90deg, rgba(96, 165, 250, 0.4), rgba(96, 165, 250, 0.05), transparent);
+    }
+
+    /* ===== MILEAGE SECTION ===== */
+    .section.mileage-section {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+      border-color: rgba(16, 185, 129, 0.15);
+    }
+
+    .section.mileage-section .section-title {
+      color: #34d399;
+    }
+
+    .section.mileage-section .section-title::after {
+      background: linear-gradient(90deg, rgba(52, 211, 153, 0.4), rgba(52, 211, 153, 0.05), transparent);
+    }
+
+    /* ===== GLASS BAR (ban count, last online) ===== */
+    .glass-bar {
+      margin: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      backdrop-filter: blur(16px) saturate(1.1);
+      -webkit-backdrop-filter: blur(16px) saturate(1.1);
+      position: relative;
+      z-index: 1;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 1px 1px rgba(255, 255, 255, 0.04) inset;
+    }
+
+    .glass-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 10%, rgba(255, 255, 255, 0.08) 50%, transparent 90%);
+    }
+
+    .glass-bar .info-label {
+      font-size: 13px;
+    }
+
+    .glass-bar .info-value {
       font-size: 14px;
-      line-height: 30px;
-      background-color: rgba(0, 0, 0, 0.4);
+      font-weight: 700;
     }
-    .position-container #map {
-      width: 100%;
-      height: 150px;
-      background-color: rgba(0, 0, 0, 0.25);
+
+    .glass-bar .info-value.has-bans {
+      color: #f87171;
+      text-shadow: 0 0 6px rgba(248, 113, 113, 0.3);
+    }
+
+    .glass-bar .info-value.no-bans {
+      color: #4ade80;
     }
   </style>
 </head>
 <body>
   <div id="container">
+    <!-- Ambient light orbs -->
+    <div class="ambient-orb orb1"></div>
+    <div class="ambient-orb orb2"></div>
+    <div class="ambient-orb orb3"></div>
+
+    <!-- Header -->
     <div class="header">
-      <img class="avatar" id="tmp-avatar" src="" alt="avatar"/>
-      <div class="info">
-        <div class="name" id="tmp-name">-</div>
-        <div class="tmp-id" id="tmp-id"></div>
+      <div class="avatar-wrapper">
+        <img class="avatar" id="tmp-avatar" src="" alt="avatar"/>
+        <div class="online-dot" id="online-dot"></div>
       </div>
-    </div>
-    <div class="details-container">
-      <div class="form-box">
-        <div class="form-item full">
-          <div class="label">🎮SteamID</div>
-          <div class="value" id="tmp-steam-id"></div>
-        </div>
-        <div class="form-item full">
-          <div class="label">📑注册日期</div>
-          <div class="value" id="tmp-register-date"></div>
-        </div>
-        <div class="form-item full" id="tmp-vtc-box">
-          <div class="label">🚚所属车队</div>
-          <div class="value" id="tmp-vtc-name"></div>
-        </div>
-        <div class="form-item full" id="tmp-vtc-role-box">
-          <div class="label">🚚车队角色</div>
-          <div class="value" id="tmp-vtc-role"></div>
-        </div>
-        <div class="form-item" id="tmp-sponsor-box">
-          <div class="label">🎁赞助用户</div>
-          <div class="value" id="tmp-sponsor-amount"></div>
-        </div>
-        <div class="form-item" id="tmp-sponsor-cumulative-box">
-          <div class="label">🎁累计赞助</div>
-          <div class="value" id="tmp-sponsor-cumulative"></div>
+      <div class="header-info">
+        <div class="player-name" id="tmp-name">-</div>
+        <div class="player-meta">
+          <span class="tmp-id" id="tmp-id"></span>
+          <span class="group-badge" id="group-badge"></span>
+          <span class="status-badge" id="status-badge"></span>
         </div>
       </div>
     </div>
-    <div class="position-container" id="position-box">
-      <div class="position-header" id="position-title"></div>
+
+    <!-- Basic Info -->
+    <div class="section">
+      <div class="section-title">📋 基本信息</div>
+      <div class="info-row">
+        <div class="info-label">🆔 SteamID</div>
+        <div class="info-value" id="tmp-steam-id"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">📑 注册日期</div>
+        <div class="info-value" id="tmp-register-date"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">💼 所属分组</div>
+        <div class="info-value" id="tmp-group-name"></div>
+      </div>
+    </div>
+
+    <!-- VTC Section (only if isJoinVtc) -->
+    <div class="section" id="vtc-section" style="display:none;">
+      <div class="section-title">🚚 车队信息</div>
+      <div class="info-row">
+        <div class="info-label">🚚 所属车队</div>
+        <div class="info-value gold" id="tmp-vtc-name"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">🚚 车队角色</div>
+        <div class="info-value" id="tmp-vtc-role"></div>
+      </div>
+      <div id="vtc-history-container"></div>
+      <div class="info-row" id="reward-points-row" style="display:none;">
+        <div class="info-label">⭐ 当前车队积分</div>
+        <div class="info-value gold" id="tmp-reward-points"></div>
+      </div>
+    </div>
+
+    <!-- Online Status -->
+    <div class="section" id="status-section">
+      <div class="section-title">📶 在线状态</div>
+      <div class="info-row">
+        <div class="info-label">📶 状态</div>
+        <div class="info-value" id="tmp-online-status"></div>
+      </div>
+      <div class="info-row" id="online-location-row" style="display:none;">
+        <div class="info-label">🌍 线上位置</div>
+        <div class="info-value" id="tmp-online-location"></div>
+      </div>
+    </div>
+
+    <!-- Last Online (only when offline) -->
+    <div class="glass-bar" id="last-online-bar" style="display:none;">
+      <div class="info-label">📶 上次在线</div>
+      <div class="info-value dim" id="tmp-last-online"></div>
+    </div>
+
+    <!-- Map Section (only when online) -->
+    <div class="section map-section" id="map-section" style="display:none;">
+      <div class="section-title" id="map-title">🗺️ 位置地图</div>
       <div id="map"></div>
     </div>
-    <div class="ban-container" id="ban-box">
-      <div class="ban-header">封禁中</div>
-      <div class="ban-body">
-        <div class="ban-hidden" id="ban-hidden-box">玩家隐藏信息</div>
-        <div class="form-box" id="ban-info-box">
-          <div class="form-item">
-            <div class="label">截止时间</div>
-            <div class="value" id="ban-until"></div>
-          </div>
-          <div class="form-item">
-            <div class="label">封禁次数</div>
-            <div class="value" id="ban-count"></div>
-          </div>
-          <div class="form-item full">
-            <div class="label">原因</div>
-            <div class="value" id="ban-reason"></div>
-          </div>
-        </div>
+
+    <!-- Ban Section (only when banned) -->
+    <div class="section ban-section" id="ban-section" style="display:none;">
+      <div class="section-title">🚫 封禁信息</div>
+      <div id="ban-content"></div>
+    </div>
+
+    <!-- Ban Count (always shown) -->
+    <div class="glass-bar" id="ban-count-bar">
+      <div class="info-label">🚫 封禁次数</div>
+      <div class="info-value" id="tmp-ban-count"></div>
+    </div>
+
+    <!-- Mileage Section -->
+    <div class="section mileage-section" id="mileage-section" style="display:none;">
+      <div class="section-title">🚩 里程信息</div>
+      <div class="info-row" id="mileage-row" style="display:none;">
+        <div class="info-label">🚩 历史里程</div>
+        <div class="info-value" id="tmp-mileage"></div>
+      </div>
+      <div class="info-row" id="today-mileage-row" style="display:none;">
+        <div class="info-label">🚩 今日里程</div>
+        <div class="info-value" id="tmp-today-mileage"></div>
+      </div>
+    </div>
+
+    <!-- Game Time Section -->
+    <div class="section game-section" id="game-section" style="display:none;">
+      <div class="section-title">🎮 游戏时长</div>
+      <div class="info-row" id="ets2-time-row" style="display:none;">
+        <div class="info-label">🎮 欧卡游戏时长</div>
+        <div class="info-value" id="tmp-ets2-time"></div>
+      </div>
+      <div class="info-row" id="ats-time-row" style="display:none;">
+        <div class="info-label">🎮 美卡游戏时长</div>
+        <div class="info-value" id="tmp-ats-time"></div>
+      </div>
+    </div>
+
+    <!-- Sponsor Section -->
+    <div class="section sponsor-section" id="sponsor-section" style="display:none;">
+      <div class="section-title">🌟 赞助信息</div>
+      <div class="info-row">
+        <div class="info-label">🌟 Patreon支持者</div>
+        <div class="info-value" id="tmp-sponsor-status"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">💰 当前赞助金额</div>
+        <div class="info-value" id="tmp-sponsor-amount"></div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">💰 全部赞助金额</div>
+        <div class="info-value" id="tmp-sponsor-cumulative"></div>
       </div>
     </div>
   </div>
+
   <script>
     let mapConfig = {
       ets: {
         tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
-        multipliers: {
-          x: 71282,
-          y: 56532
-        },
-        breakpoints: {
-          uk: {
-            x: -31056.8,
-            y: -5832.867
-          }
-        },
-        bounds: {
-          y: 131072,
-          x: 131072
-        },
+        multipliers: { x: 71282, y: 56532 },
+        breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
+        bounds: { y: 131072, x: 131072 },
         maxZoom: 8,
         minZoom: 2,
-        // 游戏地转地图坐标
         calculateMapCoordinate (x, y) {
-          return [
-            x / 1.325928 + mapConfig.ets.multipliers.x,
-            y / 1.325928 + mapConfig.ets.multipliers.y
-          ];
+          return [x / 1.325928 + mapConfig.ets.multipliers.x, y / 1.325928 + mapConfig.ets.multipliers.y];
         }
       },
       promods: {
         tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/promods/05102019/{z}/{x}/{y}.png',
-        multipliers: {
-          x: 51953,
-          y: 76024
-        },
-        breakpoints: {
-          uk: {
-            x: -31056.8,
-            y: -5832.867
-          }
-        },
-        bounds: {
-          y: 131072,
-          x: 131072
-        },
+        multipliers: { x: 51953, y: 76024 },
+        breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
+        bounds: { y: 131072, x: 131072 },
         maxZoom: 8,
         minZoom: 2,
-        // 游戏地转地图坐标
         calculateMapCoordinate (x, y) {
-          return [
-            x / 2.598541 + mapConfig.promods.multipliers.x,
-            y / 2.598541 + mapConfig.promods.multipliers.y
-          ]
+          return [x / 2.598541 + mapConfig.promods.multipliers.x, y / 2.598541 + mapConfig.promods.multipliers.y];
         }
       }
+    }
+
+    function formatMileage(val) {
+      if (!val) return null;
+      if (val > 1000) return (val / 1000).toFixed(1) + ' 公里';
+      return val + ' 米';
     }
 
     function init(data) {
-      document.getElementById('tmp-name').innerText = data.name
-      document.getElementById('tmp-avatar').src = data.avatarUrl
-        document.getElementById('tmp-id').innerHTML = `TMP#${data.tmpId} <span class="group" style="background-color: #${data.groupColor}">${data.groupName}</span>`
-      document.getElementById('tmp-steam-id').innerText = data.steamId
-      document.getElementById('tmp-register-date').innerText = data.registerDate
-      if (data.isJoinVtc) {
-        document.getElementById('tmp-vtc-name').innerText = data.vtcName
-        document.getElementById('tmp-vtc-role').innerText = data.vtcRole
-      } else {
-        document.getElementById('tmp-vtc-box').remove()
-        document.getElementById('tmp-vtc-role-box').remove()
-      }
-      if (data.isSponsor && !data.sponsorHide) {
-        document.getElementById('tmp-sponsor-amount').innerText = '$' + Math.floor(data.sponsorAmount / 100)
-        document.getElementById('tmp-sponsor-cumulative').innerText = '$' + Math.floor(data.sponsorCumulativeAmount / 100)
-      } else {
-        document.getElementById('tmp-sponsor-box').remove()
-        document.getElementById('tmp-sponsor-cumulative-box').remove()
-      }
+      // Header
+      document.getElementById('tmp-avatar').src = data.avatarUrl;
+      document.getElementById('tmp-name').innerText = data.name;
+      document.getElementById('tmp-id').innerText = 'TMP#' + data.tmpId;
+      document.getElementById('group-badge').innerText = data.groupName;
+      document.getElementById('group-badge').style.backgroundColor = '#' + data.groupColor;
+
+      // Online dot & status badge
+      const dot = document.getElementById('online-dot');
+      const badge = document.getElementById('status-badge');
       if (data.isOnline) {
-        document.getElementById('position-title').innerText = `${data.onlineServerName} · ${data.onlineCountry}-${data.onlineCity}`
-        map(data.onlineMapType, data.onlineX, data.onlineY)
+        dot.className = 'online-dot online';
+        badge.className = 'status-badge online';
+        badge.innerText = '在线';
       } else {
-        document.getElementById('position-box').remove()
+        dot.className = 'online-dot offline';
+        badge.className = 'status-badge offline';
+        badge.innerText = '离线';
       }
-      if (data.isBan) {
-        if (data.banHide) {
-          document.getElementById('ban-info-box').remove()
-        } else {
-          document.getElementById('ban-hidden-box').remove()
-          document.getElementById('ban-until').innerText = (data.banUntil || '永久')
-          document.getElementById('ban-count').innerText = (data.banCount || 0) + '次'
-          document.getElementById('ban-reason').innerText = data.banReasonZh || data.banReason
+
+      // Basic Info
+      document.getElementById('tmp-steam-id').innerText = data.steamId;
+      document.getElementById('tmp-register-date').innerText = data.registerDate + ' (' + data.registerDays + '天)';
+      document.getElementById('tmp-group-name').innerText = data.groupName;
+
+      // VTC Section
+      if (data.isJoinVtc) {
+        document.getElementById('vtc-section').style.display = '';
+        document.getElementById('tmp-vtc-name').innerText = data.vtcName;
+        document.getElementById('tmp-vtc-role').innerText = data.vtcRole;
+
+        if (data.vtcHistory && data.vtcHistory.length > 0) {
+          const historyContainer = document.getElementById('vtc-history-container');
+          data.vtcHistory.forEach(function(vtc) {
+            const item = document.createElement('div');
+            item.className = 'vtc-history-item';
+            item.innerHTML =
+              '<div class="vtc-history-name">📜 ' + vtc.vtcName + '</div>' +
+              '<div class="vtc-history-dates">加入: ' + formatDate(vtc.joinDate) + ' · 离开: ' + formatDate(vtc.quitDate) + '</div>';
+            historyContainer.appendChild(item);
+          });
+        }
+
+        if (data.rewardPoints > 0) {
+          document.getElementById('reward-points-row').style.display = '';
+          document.getElementById('tmp-reward-points').innerText = data.rewardPoints;
+        }
+      }
+
+      // Online Status Section
+      const statusEl = document.getElementById('tmp-online-status');
+      if (data.isOnline) {
+        statusEl.innerHTML = '<span style="color:#4ade80;">在线 🟢</span> <span style="color:#94a3b8;font-size:12px;">(' + data.onlineServerName + ')</span>';
+        if (data.onlineCountry && data.onlineCity) {
+          document.getElementById('online-location-row').style.display = '';
+          document.getElementById('tmp-online-location').innerText = data.onlineCountry + ' - ' + data.onlineCity;
         }
       } else {
-        document.getElementById('ban-box').remove()
+        statusEl.innerHTML = '<span style="color:#9ca3af;">离线 ⚫</span>';
+      }
+
+      // Last Online
+      if (!data.isOnline && data.lastOnlineTime) {
+        document.getElementById('last-online-bar').style.display = '';
+        document.getElementById('tmp-last-online').innerText = data.lastOnlineTime;
+      }
+
+      // Map
+      if (data.isOnline && data.onlineX !== undefined) {
+        document.getElementById('map-section').style.display = '';
+        if (data.onlineCountry && data.onlineCity) {
+          document.getElementById('map-title').innerText = '🗺️ ' + data.onlineCountry + ' - ' + data.onlineCity;
+        }
+        map(data.onlineMapType, data.onlineX, data.onlineY);
+      }
+
+      // Ban Section
+      if (data.isBan) {
+        document.getElementById('ban-section').style.display = '';
+        const banContent = document.getElementById('ban-content');
+        if (data.banHide) {
+          banContent.innerHTML = '<div class="ban-hidden-text">玩家隐藏了封禁信息</div>';
+        } else {
+          let until = '永久';
+          if (data.banUntil) until = formatDate(data.banUntil);
+          banContent.innerHTML =
+            '<div class="info-row"><div class="info-label">截止时间</div><div class="info-value red">' + until + '</div></div>' +
+            '<div class="info-row"><div class="info-label">封禁原因</div><div class="info-value red">' + (data.banReasonZh || data.banReason) + '</div></div>';
+        }
+      }
+
+      // Ban Count
+      const banCountEl = document.getElementById('tmp-ban-count');
+      const banCount = data.banCount || 0;
+      banCountEl.innerText = banCount + '次';
+      banCountEl.className = banCount > 0 ? 'info-value has-bans' : 'info-value no-bans';
+
+      // Mileage
+      const mileage = formatMileage(data.mileage);
+      const todayMileage = formatMileage(data.todayMileage);
+      if (mileage || todayMileage) {
+        document.getElementById('mileage-section').style.display = '';
+        if (mileage) {
+          document.getElementById('mileage-row').style.display = '';
+          document.getElementById('tmp-mileage').innerText = mileage;
+        }
+        if (todayMileage) {
+          document.getElementById('today-mileage-row').style.display = '';
+          document.getElementById('tmp-today-mileage').innerText = todayMileage;
+        }
+      }
+
+      // Game Time
+      if (data.ets2GameTime || data.atsGameTime) {
+        document.getElementById('game-section').style.display = '';
+        if (data.ets2GameTime) {
+          document.getElementById('ets2-time-row').style.display = '';
+          document.getElementById('tmp-ets2-time').innerText = data.ets2GameTime;
+        }
+        if (data.atsGameTime) {
+          document.getElementById('ats-time-row').style.display = '';
+          document.getElementById('tmp-ats-time').innerText = data.atsGameTime;
+        }
+      }
+
+      // Sponsor
+      if (data.isSponsor && !data.sponsorHide) {
+        document.getElementById('sponsor-section').style.display = '';
+        document.getElementById('tmp-sponsor-status').innerHTML = '<span style="color:#facc15;">是</span>';
+        const currentAmount = data.sponsorAmount == 'null' ? '0' : (data.sponsorAmount / 100).toFixed(0);
+        const cumulativeAmount = data.sponsorCumulativeAmount == 'null' ? '0' : (data.sponsorCumulativeAmount / 100).toFixed(0);
+        document.getElementById('tmp-sponsor-amount').innerText = '$' + currentAmount;
+        document.getElementById('tmp-sponsor-cumulative').innerText = '$' + cumulativeAmount;
       }
     }
 
-    function map(mapType, x, y) {
-      // 定义地图
-      let map = L.map('map', {
-        attributionControl: false,
-        crs: L.CRS.Simple,
-        zoomControl: false
-      });
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return d.getFullYear() + '年' + String(d.getMonth() + 1).padStart(2, '0') + '月' + String(d.getDate()).padStart(2, '0') + '日 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
 
-      // 边界
+    function map(mapType, x, y) {
+      let map = L.map('map', { attributionControl: false, crs: L.CRS.Simple, zoomControl: false });
       let bounds = L.latLngBounds(
         map.unproject([0, mapConfig[mapType].bounds.y], mapConfig[mapType].maxZoom),
         map.unproject([mapConfig[mapType].bounds.x, 0], mapConfig[mapType].maxZoom)
       );
-
-      // 瓦片地图
       L.tileLayer(mapConfig[mapType].tileUrl, {
-        minZoom: 2,
-        maxZoom: 10,
-        maxNativeZoom: 8,
-        tileSize: 512,
-        bounds: bounds,
-        reuseTiles: true
+        minZoom: 2, maxZoom: 10, maxNativeZoom: 8, tileSize: 512, bounds: bounds, reuseTiles: true
       }).addTo(map);
-      map.setMaxBounds(
-        new L.LatLngBounds(
-          map.unproject([0, mapConfig[mapType].bounds.y], mapConfig[mapType].maxZoom),
-          map.unproject([mapConfig[mapType].bounds.x, 0], mapConfig[mapType].maxZoom)
-        )
-      );
-
+      map.setMaxBounds(new L.LatLngBounds(
+        map.unproject([0, mapConfig[mapType].bounds.y], mapConfig[mapType].maxZoom),
+        map.unproject([mapConfig[mapType].bounds.x, 0], mapConfig[mapType].maxZoom)
+      ));
       L.circleMarker(map.unproject(mapConfig[mapType].calculateMapCoordinate(x, y), 8), {
-        color: '#2f2f2f',       // 标记点边框颜色
-        weight: 2,              // 标记点边框大小
-        fillColor: '#1cb715',   // 标记点填充颜色
-        fillOpacity: 1,         // 标记点填充不透明度（0到1之间的值）
-        radius: 5,              // 标记点半径（以像素为单位）
-        zIndex: 1000
+        color: '#2f2f2f', weight: 2, fillColor: '#1cb715', fillOpacity: 1, radius: 5, zIndex: 1000
       }).addTo(map);
-
-      // 设置中心点
       map.setView(map.unproject(mapConfig[mapType].calculateMapCoordinate(x, y), 8), 5);
     }
   </script>
