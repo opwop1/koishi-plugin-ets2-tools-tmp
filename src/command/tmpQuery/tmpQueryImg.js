@@ -29,8 +29,23 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     if (!ctx.puppeteer) {
         return '未启用 puppeteer 服务';
     }
-    if (tmpId && isNaN(tmpId)) {
-        return `请输入正确的玩家编号`;
+    if (tmpId && tmpId.startsWith("<at ")) {
+        let queryQQ = tmpId.replace('<at ', '');
+        let id = '';
+        const idStart = queryQQ.indexOf('id="');
+        if (idStart !== -1) {
+            const valueStart = idStart + 4;
+            const valueEnd = queryQQ.indexOf('"', valueStart);
+            if (valueEnd !== -1) {
+                id = queryQQ.substring(valueStart, valueEnd);
+            }
+        }
+        queryQQ = id;
+        let guildBindData = await guildBind.get(ctx.database, session.platform, queryQQ);
+        if (!guildBindData) {
+            return `该用户没有绑定玩家编号`;
+        }
+        tmpId = guildBindData.tmp_id;
     }
     // 如果没有传入tmpId，尝试从数据库查询绑定信息
     if (!tmpId) {
