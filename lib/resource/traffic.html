@@ -8,135 +8,265 @@
   <script src="./package/leaflet/heatmap.min.js"></script>
   <script src="./package/leaflet/leaflet-heatmap.js"></script>
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-    }
-    * {
-      font-family: "微软雅黑", serif;
-    }
+    body, html { margin: 0; padding: 0; }
+    * { font-family: "微软雅黑", serif; }
+
     #container {
       width: 1000px;
       position: relative;
     }
+
     .map {
       width: 100%;
       height: 900px;
-      background-color: #4b4b4b;
+      background-color: #1a1a2e;
     }
+
+    /* Map overlay frame - cyber corners */
+    .map-frame {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-color: rgba(0, 200, 255, 0.4);
+      border-style: solid;
+    }
+
+    .corner.tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    .corner.tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+    .corner.bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+    .corner.br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+    /* Map title overlay */
+    .map-title {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .map-title-icon {
+      font-size: 16px;
+      filter: drop-shadow(0 0 6px rgba(0, 200, 255, 0.5));
+    }
+
+    .map-title-text {
+      font-size: 12px;
+      font-weight: 800;
+      color: rgba(0, 200, 255, 0.6);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Player count badge */
+    .player-badge {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(0, 200, 255, 0.2);
+      border-radius: 6px;
+      backdrop-filter: blur(8px);
+    }
+
+    .player-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 4px rgba(0, 255, 136, 0.6);
+    }
+
+    .player-badge-text {
+      font-size: 11px;
+      font-weight: 700;
+      color: #00c8ff;
+      text-shadow: 0 0 4px rgba(0, 200, 255, 0.3);
+    }
+
+    /* ===== TRAFFIC BOX ===== */
     .traffic-box {
-      //position: absolute;
-      //bottom: 0;
-      //left: 0;
-      //z-index: 9999999;
       width: 100%;
-      backdrop-filter: blur(3px);
-      background-color: #4b4b4b;
-      padding: 12px 16px;
+      background: linear-gradient(180deg, #0d0d1a 0%, #0a0a14 100%);
+      padding: 0;
       box-sizing: border-box;
-      overflow-y: hidden;
+      overflow: hidden;
+      position: relative;
     }
-    .traffic-item {
-      color: #ffffff;
-      width: 33.3333%;
-      float: left;
-      margin-top: 8px;
+
+    .traffic-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px 6px;
+      border-bottom: 1px solid rgba(0, 200, 255, 0.08);
+    }
+
+    .traffic-header-icon {
       font-size: 14px;
-      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      filter: drop-shadow(0 0 4px rgba(0, 200, 255, 0.4));
+    }
+
+    .traffic-header-text {
+      font-size: 11px;
+      font-weight: 800;
+      color: #556;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .traffic-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      padding: 0 12px 10px;
+    }
+
+    .traffic-item {
+      color: #c0c8d0;
+      padding: 8px 10px;
+      border-right: 1px solid rgba(0, 200, 255, 0.06);
+      border-bottom: 1px solid rgba(0, 200, 255, 0.04);
+      font-size: 12px;
       box-sizing: border-box;
-      padding: 0 10px;
       display: flex;
       flex-direction: row;
       align-items: center;
-      justify-content: center;
+      gap: 6px;
     }
-    .traffic-item:nth-child(-n+3) {
-      margin-top: 0;
+
+    .traffic-item:nth-child(3n) {
+      border-right: none;
     }
-    .traffic-item:last-child, .traffic-item:nth-child(3n) {
-      border-right: 0;
+
+    .traffic-item:nth-last-child(-n+3) {
+      border-bottom: none;
     }
+
     .traffic-item .region-info {
-      display: inline-block;
-      width: 72%;
+      flex: 1;
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .traffic-item .player-count {
-      display: inline-block;
-      width: 16%;
-      text-align: center;
+
+    .traffic-item .region-info strong {
+      color: #d0e0ff;
+      font-weight: 700;
     }
+
+    .traffic-item .player-count {
+      font-size: 12px;
+      font-weight: 800;
+      color: #00c8ff;
+      text-shadow: 0 0 4px rgba(0, 200, 255, 0.2);
+      flex-shrink: 0;
+    }
+
     .traffic-item .traffic-status {
-      display: inline-block;
-      width: 12%;
-      text-align: right;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-fluid {
+      color: #00d26a;
+      background: rgba(0, 210, 106, 0.1);
+      border: 1px solid rgba(0, 210, 106, 0.2);
+    }
+
+    .status-moderate {
+      color: #ff6723;
+      background: rgba(255, 103, 35, 0.1);
+      border: 1px solid rgba(255, 103, 35, 0.2);
+    }
+
+    .status-congested {
+      color: #f8312f;
+      background: rgba(248, 49, 47, 0.1);
+      border: 1px solid rgba(248, 49, 47, 0.2);
+    }
+
+    .status-heavy {
+      color: #8d67c5;
+      background: rgba(141, 103, 197, 0.1);
+      border: 1px solid rgba(141, 103, 197, 0.2);
     }
   </style>
 </head>
 <body>
   <div id="container">
     <div id="map" class="map"></div>
-    <div class="traffic-box"></div>
+
+    <div class="map-frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+    </div>
+
+    <div class="map-title">
+      <div class="map-title-icon">🗺️</div>
+      <div class="map-title-text">LIVE HEATMAP</div>
+    </div>
+
+    <div class="player-badge">
+      <div class="player-badge-dot"></div>
+      <div class="player-badge-text" id="player-count">0 在线</div>
+    </div>
+
+    <div class="traffic-box">
+      <div class="traffic-header">
+        <span class="traffic-header-icon">📊</span>
+        <span class="traffic-header-text">热门区域路况</span>
+      </div>
+      <div class="traffic-grid" id="traffic-grid"></div>
+    </div>
   </div>
+
   <script>
     let mapConfig = {
       ets: {
         tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/ets2/05102019/{z}/{x}/{y}.png',
-        multipliers: {
-          x: 70272,
-          y: 76157
-        },
-        breakpoints: {
-          uk: {
-            x: -31056.8,
-            y: -5832.867
-          }
-        },
-        bounds: {
-          y: 131072,
-          x: 131072
-        },
-        maxZoom: 8,
-        minZoom: 2,
-        // 游戏地转地图坐标
-        calculateMapCoordinate (x, y) {
-          return [
-            x / 1.609055 + mapConfig.ets.multipliers.x,
-            y / 1.609055 + mapConfig.ets.multipliers.y
-          ];
+        multipliers: { x: 70272, y: 76157 },
+        breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
+        bounds: { y: 131072, x: 131072 },
+        maxZoom: 8, minZoom: 2,
+        calculateMapCoordinate(x, y) {
+          return [x / 1.609055 + mapConfig.ets.multipliers.x, y / 1.609055 + mapConfig.ets.multipliers.y];
         }
       },
       promods: {
-        tileUrl: 'https://ets-map.oss-cn-beijing.aliyuncs.com/promods/05102019/{z}/{x}/{y}.png',
-        multipliers: {
-          x: 51953,
-          y: 76024
-        },
-        breakpoints: {
-          uk: {
-            x: -31056.8,
-            y: -5832.867
-          }
-        },
-        bounds: {
-          y: 131072,
-          x: 131072
-        },
-        maxZoom: 8,
-        minZoom: 2,
-        // 游戏地转地图坐标
-        calculateMapCoordinate (x, y) {
-          return [
-            x / 2.598541 + mapConfig.promods.multipliers.x,
-            y / 2.598541 + mapConfig.promods.multipliers.y
-          ]
+        tileUrl: 'https://ets6-map.oss-cn-beijing.aliyuncs.com/promods/05102019/{z}/{x}/{y}.png',
+        multipliers: { x: 51953, y: 76024 },
+        breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
+        bounds: { y: 131072, x: 131072 },
+        maxZoom: 8, minZoom: 2,
+        calculateMapCoordinate(x, y) {
+          return [x / 2.598541 + mapConfig.promods.multipliers.x, y / 2.598541 + mapConfig.promods.multipliers.y];
         }
       }
-    }
+    };
 
-    // 定义地图
     let map = L.map('map', {
       attributionControl: false,
       crs: L.CRS.Simple,
@@ -144,62 +274,62 @@
       zoomSnap: 0.1
     });
 
+    const statusClassMap = {
+      '畅通': 'status-fluid',
+      '正常': 'status-moderate',
+      '缓慢': 'status-congested',
+      '拥堵': 'status-heavy'
+    };
+
     function setData(data) {
-      // 边界
       let bounds = L.latLngBounds(
         map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
         map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
       );
 
-      // 瓦片地图
       L.tileLayer(mapConfig[data.mapType].tileUrl, {
-        minZoom: 0,
-        maxZoom: 8,
-        minNativeZoom: 1,
-        maxNativeZoom: 8,
-        tileSize: 512,
-        bounds: bounds,
-        reuseTiles: true
+        minZoom: 0, maxZoom: 8,
+        minNativeZoom: 1, maxNativeZoom: 8,
+        tileSize: 512, bounds: bounds, reuseTiles: true
       }).addTo(map);
-      map.setMaxBounds(
-        new L.LatLngBounds(
-          map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
-          map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
-        )
-      );
 
-      // 展示地图全貌
-      map.fitBounds(bounds)
+      map.setMaxBounds(new L.LatLngBounds(
+        map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
+        map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)
+      ));
 
-      // 热力图
+      map.fitBounds(bounds);
+
+      // Heatmap
       let heatmapLayer = new HeatmapOverlay({
         radius: 3,
         maxOpacity: 0.8,
         scaleRadius: true,
         useLocalExtrema: true,
-        latField: "lat",
-        lngField: "lng",
-        valueField: "count"
+        latField: "lat", lngField: "lng", valueField: "count"
       });
       map.addLayer(heatmapLayer);
-      let heatmapData = []
+
+      let heatmapData = [];
       for (const arrayElement of data.playerCoordinateList) {
         let unprojected = map.unproject(mapConfig[data.mapType].calculateMapCoordinate(arrayElement[0], arrayElement[1]), 8);
         heatmapData.push({ lat: unprojected.lat, lng: unprojected.lng, count: 1 });
       }
-      heatmapLayer.setData({
-        min: 1,
-        max: 5000,
-        data: heatmapData
-      })
+      heatmapLayer.setData({ min: 1, max: 5000, data: heatmapData });
 
-      // 展示热门地区路况状态
+      // Player count badge
+      document.getElementById('player-count').textContent = data.playerCoordinateList.length.toLocaleString() + ' 在线';
+
+      // Traffic grid
+      const grid = document.getElementById('traffic-grid');
       for (const traffic of data.trafficList) {
-        document.getElementsByClassName('traffic-box')[0].insertAdjacentHTML('beforeend', `
+        const cls = statusClassMap[traffic.severity.text] || '';
+        grid.insertAdjacentHTML('beforeend', `
           <div class="traffic-item">
-            <span class="region-info"><strong>${traffic.country}</strong> ${traffic.province}</span><span class="player-count">${traffic.playerCount}人</span><span class="traffic-status" style="color: ${traffic.severity.color}">${traffic.severity.text}</span>
-          </div>
-        `);
+            <span class="region-info"><strong>${traffic.country}</strong> ${traffic.province}</span>
+            <span class="player-count">${traffic.playerCount}</span>
+            <span class="traffic-status ${cls}">${traffic.severity.text}</span>
+          </div>`);
       }
     }
   </script>

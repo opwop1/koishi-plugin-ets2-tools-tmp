@@ -4,95 +4,207 @@
   <meta charset="UTF-8">
   <title>DLC</title>
   <style>
-    #dlc-info-container {
-      width: 600px;
-      background-color: #222d33;
-      padding: 14px;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: #0a0a12;
+      -webkit-font-smoothing: antialiased;
     }
 
+    #dlc-info-container {
+      width: 600px;
+      background: linear-gradient(180deg, #0d0d18 0%, #0a0a12 100%);
+      padding: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header */
+    .page-header {
+      padding: 20px 20px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(251, 191, 36, 0.06) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(251, 191, 36, 0.08);
+    }
+
+    .page-header-icon {
+      font-size: 22px;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.4));
+    }
+
+    .page-header-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #f5f5f5;
+      letter-spacing: 1px;
+    }
+
+    .page-header-title span {
+      color: #fbbf24;
+      text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+    }
+
+    .page-header-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+
+    /* DLC list */
+    .dlc-list {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* DLC Card */
     .dlc-box {
       display: flex;
       flex-direction: row;
-      box-sizing: border-box;
-      padding: 12px;
-      margin-top: 12px;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
     }
-    .dlc-box:nth-of-type(1) {
-      margin-top: 0;
+
+    .dlc-box::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.7) 100%);
+      pointer-events: none;
+      z-index: 1;
     }
 
     .dlc-box .header-image {
-      width: 210px;
-      display: inline-block;
+      width: 200px;
+      object-fit: cover;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 2;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .dlc-box .dlc-info {
       flex: 1;
       width: 0;
-      //border: 1px solid red;
-      box-sizing: border-box;
-      padding: 2px 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
     }
+
     .dlc-info .name {
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: 600;
+      color: #f0f0f0;
+      font-size: 15px;
+      font-weight: 800;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     }
+
     .dlc-info .desc {
-      color: #e5e5e5;
-      font-size: 14px;
+      color: #999;
+      font-size: 12px;
+      line-height: 1.5;
       overflow: hidden;
       text-overflow: ellipsis;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
-    }
-    .dlc-info .price-box {
-      margin-top: 8px;
+      margin-top: 4px;
     }
 
-    .dlc-info .price-box span {
-      display: inline-block;
-      color: #BEEE11;
-      font-size: 16px;
+    .dlc-info .price-box {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+
+    .dlc-info .price-box .final-price {
+      color: #fbbf24;
+      font-size: 16px;
+      font-weight: 900;
+      text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+    }
+
     .dlc-info .price-box .discount-price {
-      color: #cbcbcb;
+      color: #555;
+      font-size: 12px;
       text-decoration: line-through;
     }
+
     .dlc-info .price-box .discount {
-      font-size: 14px;
-      color: #BEEE11;
-      background-color: #4c6b22;
-      padding: 2px 6px;
-      margin-left: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      padding: 1px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .dlc-info .price-box .free-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.12);
+      border: 1px solid rgba(74, 222, 128, 0.25);
+      padding: 1px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
     }
   </style>
 </head>
 <body>
   <div id="dlc-info-container">
+    <div class="page-header">
+      <span class="page-header-icon">🎮</span>
+      <div class="page-header-title">DLC <span>商店</span></div>
+      <div class="page-header-count" id="dlc-count"></div>
+    </div>
+    <div class="dlc-list" id="dlc-list"></div>
   </div>
 
   <script>
     function setData(dlcList) {
-      // 遍历渲染DLC列表
+      document.getElementById('dlc-count').textContent = `${dlcList.length} 个DLC`;
+
+      const listEl = document.getElementById('dlc-list');
+
       for (let dlc of dlcList) {
-        let dom = document.createElement(`div`);
+        let dom = document.createElement('div');
         dom.className = 'dlc-box';
         dom.style.backgroundImage = `url('${dlc.backgroundImageUrl}')`;
 
-        let priceDiscountDom = ''
-        if (dlc.discount > 0) {
-          priceDiscountDom = `
-          <span class="discount-price">￥${Math.ceil(dlc.originalPrice / 100)}</span>
-          <span class="discount">-${dlc.discount}%</span>
-        `;
+        const isFree = dlc.finalPrice === 0;
+        const hasDiscount = dlc.discount > 0 && !isFree;
+
+        let priceHtml = '';
+        if (isFree) {
+          priceHtml = '<span class="free-badge">免费</span>';
+        } else {
+          priceHtml = `<span class="final-price">￥${Math.ceil(dlc.finalPrice / 100)}</span>`;
+          if (hasDiscount) {
+            priceHtml += `
+              <span class="discount-price">￥${Math.ceil(dlc.originalPrice / 100)}</span>
+              <span class="discount">-${dlc.discount}%</span>`;
+          }
         }
 
         dom.innerHTML = `
@@ -100,14 +212,10 @@
           <div class="dlc-info">
             <div class="name">${dlc.name}</div>
             <div class="desc">${dlc.desc}</div>
-            <div class="price-box">
-              <span>￥${Math.ceil(dlc.finalPrice / 100)}</span>
-              ${priceDiscountDom}
-            </div>
-          </div>
-        `;
+            <div class="price-box">${priceHtml}</div>
+          </div>`;
 
-        document.querySelector('#dlc-info-container').appendChild(dom);
+        listEl.appendChild(dom);
       }
     }
   </script>

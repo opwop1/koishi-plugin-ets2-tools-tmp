@@ -4,158 +4,330 @@
   <meta charset="UTF-8">
   <title>Server List</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-      background-color: #0b1120;
-    }
-    #container {
-      width: 380px;
-      background: linear-gradient(180deg, #0f1a2e 0%, #0b1120 100%);
-      padding: 0 0 6px 0;
+      background: #080810;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Header */
+    #container {
+      width: 480px;
+      background: #0a0a12;
+      padding-bottom: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Grid background */
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 200, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 200, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Scan line effect */
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.15), transparent);
+      animation: scan 4s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes scan {
+      0% { top: 0; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    /* ===== HEADER ===== */
     .header {
-      height: 42px;
-      background-color: rgba(0, 0, 0, 0.3);
+      padding: 20px 20px 14px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-    }
-    .header .title {
-      color: #8bafff;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 1px;
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(180deg, rgba(0, 200, 255, 0.06) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(0, 200, 255, 0.08);
     }
 
-    /* Server list */
+    .header-icon {
+      font-size: 22px;
+      filter: drop-shadow(0 0 6px rgba(0, 200, 255, 0.5));
+    }
+
+    .header .title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #e0f0ff;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .header .title span {
+      color: #00c8ff;
+      text-shadow: 0 0 10px rgba(0, 200, 255, 0.4);
+    }
+
+    .header-stats {
+      margin-left: auto;
+      display: flex;
+      gap: 12px;
+    }
+
+    .header-stat {
+      text-align: right;
+    }
+
+    .header-stat-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #00c8ff;
+      text-shadow: 0 0 8px rgba(0, 200, 255, 0.3);
+    }
+
+    .header-stat-label {
+      font-size: 9px;
+      color: #445;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ===== SERVER LIST ===== */
     .server-list {
-      padding: 6px 10px 0 10px;
+      padding: 10px 14px 0;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
+      position: relative;
+      z-index: 2;
     }
 
-    /* Server card */
+    /* ===== SERVER CARD ===== */
     .server-card {
-      background: rgba(22, 33, 55, 0.8);
-      border-radius: 6px;
-      border: 1px solid rgba(139, 175, 255, 0.08);
+      background: linear-gradient(135deg, rgba(0, 200, 255, 0.04) 0%, rgba(0, 200, 255, 0.01) 100%);
+      border: 1px solid rgba(0, 200, 255, 0.1);
+      border-radius: 10px;
       overflow: hidden;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(0, 200, 255, 0.05);
     }
 
-    /* Card info */
-    .server-info {
-      padding: 7px 12px 5px 12px;
+    .server-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 10%, rgba(0, 200, 255, 0.15) 50%, transparent 90%);
     }
+
+    .server-card.offline {
+      opacity: 0.4;
+      border-color: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .server-info {
+      padding: 10px 14px 6px;
+    }
+
     .server-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
+
     .server-left {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       flex: 1;
       min-width: 0;
     }
-    .status-indicator {
-      width: 6px;
-      height: 6px;
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
+      position: relative;
     }
-    .status-indicator.online {
-      background-color: #34d058;
-      box-shadow: 0 0 5px rgba(52, 208, 88, 0.5);
+
+    .status-dot.online {
+      background: #00ff88;
+      box-shadow: 0 0 6px rgba(0, 255, 136, 0.6), 0 0 12px rgba(0, 255, 136, 0.2);
     }
-    .status-indicator.offline {
-      background-color: #484f58;
+
+    .status-dot.online::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      animation: pulse 2s ease-out infinite;
     }
+
+    @keyframes pulse {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    .status-dot.offline {
+      background: #333;
+    }
+
     .server-name {
-      color: #e6edf3;
+      color: #d0e8ff;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 200px;
-    }
-    .player-count {
-      color: #6e7a8a;
-      font-size: 11px;
-      white-space: nowrap;
-      flex-shrink: 0;
-      margin-left: 6px;
-    }
-    .player-count .num {
-      color: #c9d1d9;
-      font-weight: 700;
-      font-size: 12px;
+      letter-spacing: 0.3px;
     }
 
-    /* Features row */
+    .player-info {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      flex-shrink: 0;
+      margin-left: 10px;
+    }
+
+    .player-num {
+      font-size: 16px;
+      font-weight: 900;
+      color: #00c8ff;
+      text-shadow: 0 0 8px rgba(0, 200, 255, 0.3);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .player-max {
+      font-size: 11px;
+      color: #445;
+      font-weight: 500;
+    }
+
+    /* Progress bar */
+    .server-bar {
+      height: 2px;
+      background: rgba(0, 200, 255, 0.06);
+      border-radius: 1px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .server-bar-fill {
+      height: 100%;
+      border-radius: 1px;
+      background: linear-gradient(90deg, #00c8ff, #00ff88);
+      box-shadow: 0 0 6px rgba(0, 200, 255, 0.3);
+      transition: width 0.3s;
+    }
+
+    /* Features */
     .features {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-top: 3px;
+      margin-top: 5px;
     }
+
     .feature {
-      font-size: 10px;
-      color: #5a6572;
+      font-size: 9px;
+      color: #3a4a5a;
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.02);
       white-space: nowrap;
+      letter-spacing: 0.3px;
     }
 
-    /* Queue badge */
     .queue-badge {
-      color: #f0883e;
       font-size: 10px;
+      color: #ff8844;
       margin-left: 6px;
+      font-weight: 600;
     }
 
-    /* Chart area */
+    /* Chart */
     .chart-area {
       position: relative;
-      height: 38px;
+      height: 36px;
+      opacity: 0.8;
     }
+
     .chart-area svg {
       display: block;
       width: 100%;
       height: 100%;
     }
 
+    /* ===== FOOTER ===== */
+    .footer {
+      text-align: center;
+      padding: 10px 20px 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .footer-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.15), transparent);
+      margin-bottom: 8px;
+    }
+
+    .footer-text {
+      font-size: 9px;
+      color: #223;
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 <body>
 <div id="container">
+  <div class="grid-bg"></div>
+  <div class="scan-line"></div>
+
   <div class="header">
-    <div class="title">TruckersMP 服务器状态</div>
+    <span class="header-icon">📡</span>
+    <div class="title">TRUCKERS<span>MP</span> 服务器</div>
+    <div class="header-stats">
+      <div class="header-stat">
+        <div class="header-stat-value" id="total-online">-</div>
+        <div class="header-stat-label">在线</div>
+      </div>
+    </div>
   </div>
 
   <div class="server-list" id="server-list"></div>
 
+  <div class="footer">
+    <div class="footer-line"></div>
+    <div class="footer-text">REAL-TIME SERVER MONITOR</div>
+  </div>
 </div>
 
 <script>
-/**
- * 构建 SVG 面积折线图
- * maxPlayer 的 50% 作为余量，上限不超过 maxPlayer
- */
 function buildChartSVG(data, width, height, maxPlayer) {
-  const padTop = 2;
-  const padBottom = 0;
-  const chartW = width;
-  const chartH = height - padTop - padBottom;
-
+  const padTop = 2, padBottom = 0;
+  const chartW = width, chartH = height - padTop - padBottom;
   const dataMax = Math.max(...data, 1);
   const max = Math.min(maxPlayer, maxPlayer * 0.12 + dataMax);
   const step = chartW / (data.length - 1);
@@ -167,9 +339,7 @@ function buildChartSVG(data, width, height, maxPlayer) {
   });
 
   const lineD = points.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
-  const areaD = lineD
-    + ` L${points[points.length - 1][0]},${padTop + chartH}`
-    + ` L${points[0][0]},${padTop + chartH} Z`;
+  const areaD = lineD + ` L${points[points.length - 1][0]},${padTop + chartH} L${points[0][0]},${padTop + chartH} Z`;
 
   const gid = 'g' + Math.random().toString(36).slice(2, 8);
 
@@ -177,27 +347,19 @@ function buildChartSVG(data, width, height, maxPlayer) {
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="rgba(79,139,255,0.4)"/>
-          <stop offset="100%" stop-color="rgba(79,139,255,0.02)"/>
+          <stop offset="0%" stop-color="rgba(0,200,255,0.3)"/>
+          <stop offset="100%" stop-color="rgba(0,200,255,0.01)"/>
         </linearGradient>
       </defs>
       <path d="${areaD}" fill="url(#${gid})"/>
-      <path d="${lineD}" fill="none" stroke="#4f8bff" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="${lineD}" fill="none" stroke="#00c8ff" stroke-width="1.5" stroke-linejoin="round"/>
     </svg>`;
 }
 
-/**
- * 将 playerHistory 标准化为 288 个点（24h，每5分钟一个点）
- * 缺失的时间段填充为 0
- * @param {Array<{updateTime: string, playerCount: number}>} playerHistory
- */
 function normalizeHistory(playerHistory) {
-  const SLOT_COUNT = 288;
-  const SLOT_MS = 300000;
-
+  const SLOT_COUNT = 288, SLOT_MS = 300000;
   if (!playerHistory || playerHistory.length === 0) return [];
 
-  // API 返回的是北京时间(UTC+8)，用 Date.UTC 生成时间戳再减去8小时偏移
   function parseTime(str) {
     const [datePart, timePart] = str.trim().replace('T', ' ').split(' ');
     const [y, m, d] = datePart.split('-').map(Number);
@@ -208,7 +370,6 @@ function normalizeHistory(playerHistory) {
 
   const now = Date.now();
   const currentSlot = Math.floor(now / SLOT_MS) * SLOT_MS;
-
   const dataMap = {};
   for (const item of playerHistory) {
     const ts = parseTime(item.updateTime);
@@ -222,54 +383,46 @@ function normalizeHistory(playerHistory) {
     const slotTime = currentSlot - (SLOT_COUNT - 1 - i) * SLOT_MS;
     result.push(dataMap[slotTime] !== undefined ? dataMap[slotTime] : 0);
   }
-
   return result;
 }
 
-/**
- * 渲染一个服务器卡片
- */
 function createServerCard(server) {
   const card = document.createElement('div');
-  card.className = 'server-card';
+  card.className = `server-card${server.isOnline !== 1 ? ' offline' : ''}`;
 
-  // 只展示存在的特性
+  const isOnline = server.isOnline === 1;
+  const pct = maxP => Math.min(100, (server.playerCount / maxP) * 100);
+
   let featuresHTML = '';
-  if (server.collisionsEnable === 1) {
-    featuresHTML += '<span class="feature">💥 碰撞</span>';
-  }
-  if (server.afkEnable === 0) {
-    featuresHTML += '<span class="feature">💤 挂机</span>';
-  }
-  if (server.policeCarEnable === 1) {
-    featuresHTML += '<span class="feature">🚓 警车</span>';
-  }
-  if (server.speedLimiterEnable === 1) {
-    featuresHTML += '<span class="feature">🐢 限速</span>';
-  }
+  if (server.collisionsEnable === 1) featuresHTML += '<span class="feature">💥 碰撞</span>';
+  if (server.afkEnable === 0) featuresHTML += '<span class="feature">💤 挂机</span>';
+  if (server.policeCarEnable === 1) featuresHTML += '<span class="feature">🚓 警车</span>';
+  if (server.speedLimiterEnable === 1) featuresHTML += '<span class="feature">🐢 限速</span>';
 
-  // 队列
   let queueText = '';
-  if (server.queueCount > 0) {
-    queueText = `<span class="queue-badge">队列 ${server.queueCount}</span>`;
-  }
+  if (server.queueCount > 0) queueText = `<span class="queue-badge">⏳ ${server.queueCount}</span>`;
 
   card.innerHTML = `
     <div class="server-info">
       <div class="server-row">
         <div class="server-left">
-          <span class="status-indicator ${server.isOnline === 1 ? 'online' : 'offline'}"></span>
+          <div class="status-dot ${isOnline ? 'online' : 'offline'}"></div>
           <span class="server-name">${server.serverName}</span>
         </div>
-        <span class="player-count"><span class="num">${server.playerCount}</span> / ${server.maxPlayer}${queueText}</span>
+        <div class="player-info">
+          <span class="player-num">${server.playerCount}</span>
+          <span class="player-max">/ ${server.maxPlayer}</span>
+          ${queueText}
+        </div>
       </div>
+      <div class="server-bar"><div class="server-bar-fill" style="width:${pct(server.maxPlayer)}%"></div></div>
       ${featuresHTML ? '<div class="features">' + featuresHTML + '</div>' : ''}
     </div>
     <div class="chart-area">
-      ${server.isOnline === 1 && server.playerHistory && server.playerHistory.length > 0
+      ${isOnline && server.playerHistory && server.playerHistory.length > 0
         ? (() => {
             const normalized = normalizeHistory(server.playerHistory);
-            return normalized.length > 0 ? buildChartSVG(normalized, 380, 38, server.maxPlayer) : '';
+            return normalized.length > 0 ? buildChartSVG(normalized, 480, 36, server.maxPlayer) : '';
           })()
         : ''}
     </div>`;
@@ -277,22 +430,21 @@ function createServerCard(server) {
   return card;
 }
 
-/**
- * 主渲染函数
- */
 function setData(apiData) {
   if (!apiData || !apiData.data) return;
 
   const servers = apiData.data;
   const listEl = document.getElementById('server-list');
-
   listEl.innerHTML = '';
+
+  // Total online count
+  const totalOnline = servers.reduce((sum, s) => sum + (s.playerCount || 0), 0);
+  document.getElementById('total-online').textContent = totalOnline.toLocaleString();
 
   servers.forEach(server => {
     listEl.appendChild(createServerCard(server));
   });
 }
-
 </script>
 </body>
 </html>

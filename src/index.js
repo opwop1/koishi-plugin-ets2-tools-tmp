@@ -310,7 +310,7 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.tmpFootprint) {
-        ctx.command('近十日足迹 [tmpId:string]')
+        ctx.command('近七日足迹 [tmpId:string]')
             .usage("查询ETS服务器今日足迹")
             .example("近七日足迹")
             .example("近七日足迹 12345")

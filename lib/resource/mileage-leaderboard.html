@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <title>Mileage Leaderboard</title>
@@ -10,354 +10,555 @@
       font-weight: normal;
       font-style: normal;
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: 'segui-emj', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #000;
+      font-family: 'segui-emj', 'Segoe UI', -apple-system, sans-serif;
+      background: #0a0a0a;
+      -webkit-font-smoothing: antialiased;
     }
 
     #container {
-      width: 340px;
-      background: linear-gradient(135deg, #1f2f54, #0f2c2a);
+      width: 520px;
+      background: #0d0d0d;
+      padding-bottom: 20px;
       overflow: hidden;
-      padding-bottom: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      position: relative;
     }
 
+    /* Racing stripe background */
+    .racing-stripes {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: repeating-linear-gradient(
+        90deg,
+        #ff6b00 0px, #ff6b00 20px,
+        #0d0d0d 20px, #0d0d0d 40px
+      );
+      z-index: 10;
+    }
+
+    /* Carbon fiber texture overlay */
+    .carbon-texture {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 2px 2px, rgba(255,255,255,0.015) 1px, transparent 0) 0 0 / 4px 4px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Neon glow accents */
+    .neon-line-left {
+      position: absolute;
+      left: 0;
+      top: 80px;
+      bottom: 40px;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, #ff6b00, #ff3d00, #ff6b00, transparent);
+      box-shadow: 0 0 8px rgba(255, 107, 0, 0.4), 0 0 20px rgba(255, 61, 0, 0.15);
+      z-index: 1;
+    }
+
+    .neon-line-right {
+      position: absolute;
+      right: 0;
+      top: 120px;
+      bottom: 80px;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, #ff3d00, #ff6b00, #ff3d00, transparent);
+      box-shadow: 0 0 8px rgba(255, 61, 0, 0.4), 0 0 20px rgba(255, 107, 0, 0.15);
+      z-index: 1;
+    }
+
+    /* ===== HEADER ===== */
     .header {
-      height: 45px;
-      background-color: rgba(0, 0, 0, .1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 20px;
-      box-shadow: 0 0 16px rgba(0, 0, 0, .4);
+      padding: 30px 24px 18px;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .header-icon {
+      font-size: 42px;
+      display: block;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 0 12px rgba(255, 107, 0, 0.5));
     }
 
     .header .title {
-      color: #b0c7ff;
-      font-size: 16px;
-      font-weight: 600;
-      text-align: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 3px;
+      text-transform: uppercase;
     }
 
-    .leaderboard-container {
-      padding: 12px 16px 0 16px;
+    .header .title-accent {
+      display: inline-block;
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #ff6b00, transparent);
+      margin: 10px auto 0;
+      border-radius: 2px;
+      box-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
     }
 
-    .leaderboard-item {
-      background-color: rgba(0, 0, 0, 0.25);
-      margin-bottom: 4px;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    .header .subtitle {
+      font-size: 11px;
+      color: #555;
+      margin-top: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
 
-    .leaderboard-item.top3 {
-      background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
-      border-color: rgba(255, 215, 0, 0.3);
-      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
-    }
-
-    .leaderboard-item.current-player {
-      background: linear-gradient(135deg, rgba(92, 227, 92, 0.3), rgba(92, 227, 92, 0.15));
-      border: 1px solid rgba(92, 227, 92, 0.6);
-      box-shadow: 0 2px 10px rgba(92, 227, 92, 0.3);
-    }
-
-    .item-content {
+    /* ===== TOP 1 HERO ===== */
+    .hero {
+      margin: 16px 20px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(255, 107, 0, 0.1) 0%, rgba(255, 61, 0, 0.05) 100%);
+      border: 1px solid rgba(255, 107, 0, 0.2);
+      border-radius: 16px;
+      position: relative;
+      z-index: 2;
       display: flex;
       align-items: center;
-      padding: 8px 14px;
+      gap: 16px;
+      box-shadow: 0 4px 24px rgba(255, 107, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
 
-    .rank {
-      width: 32px;
-      color: #ffffff;
-      font-size: 15px;
-      font-weight: bold;
-      text-align: center;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 20px;
+      right: 20px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 107, 0, 0.3), transparent);
     }
 
-    .current-player .rank {
-      min-width: 48px;
+    .hero-crown {
+      font-size: 36px;
+      filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
       flex-shrink: 0;
     }
 
-    .rank.top1 {
-      color: #ffd700;
-      text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-    }
-
-    .rank.top2 {
-      color: #c0c0c0;
-      text-shadow: 0 0 6px rgba(192, 192, 192, 0.5);
-    }
-
-    .rank.top3 {
-      color: #cd7f32;
-      text-shadow: 0 0 6px rgba(205, 127, 50, 0.5);
-    }
-
-    .player-info {
+    .hero-info {
       flex: 1;
-      padding: 0 10px;
       min-width: 0;
     }
 
-    .player-name {
-      color: #ffffff;
-      font-size: 13px;
-      font-weight: 600;
+    .hero-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ff6b00;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-      max-width: 160px;
+      text-shadow: 0 0 12px rgba(255, 107, 0, 0.3);
     }
 
-    .current-player .player-name {
-      max-width: 144px;
+    .hero-rank {
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 1px;
+      margin-top: 2px;
     }
 
+    .hero-distance {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
 
-    .mileage-value {
-      color: #ffffff;
+    .hero-distance-unit {
+      font-size: 12px;
+      font-weight: 400;
+      color: #666;
+      margin-left: 4px;
+    }
+
+    /* ===== 2ND & 3RD PODIUM ===== */
+    .podium-row {
+      display: flex;
+      gap: 10px;
+      margin: 12px 20px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .podium-card {
+      flex: 1;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .podium-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    }
+
+    .podium-card.second {
+      border-color: rgba(192, 192, 192, 0.15);
+      background: linear-gradient(135deg, rgba(192, 192, 192, 0.06), rgba(192, 192, 192, 0.02));
+    }
+
+    .podium-card.third {
+      border-color: rgba(205, 127, 50, 0.15);
+      background: linear-gradient(135deg, rgba(205, 127, 50, 0.06), rgba(205, 127, 50, 0.02));
+    }
+
+    .podium-medal {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .podium-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .podium-card-name {
       font-size: 13px;
       font-weight: 700;
-      text-align: right;
+      color: #ddd;
       white-space: nowrap;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-      min-width: 65px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
+    .podium-card.second .podium-card-name { color: #c0c0c0; }
+    .podium-card.third .podium-card-name { color: #cd7f32; }
+
+    .podium-card-dist {
+      font-size: 14px;
+      font-weight: 800;
+      color: #aaa;
+      flex-shrink: 0;
+    }
+
+    .podium-card.second .podium-card-dist { color: #c0c0c0; }
+    .podium-card.third .podium-card-dist { color: #cd7f32; }
+
+    /* ===== RANK LIST (4-10) ===== */
+    .rank-list {
+      margin: 8px 20px 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .rank-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      margin-bottom: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid rgba(255, 107, 0, 0.3);
+      border-radius: 0 8px 8px 0;
+      position: relative;
+    }
+
+    .rank-item::before {
+      content: '';
+      position: absolute;
+      left: -3px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 0;
+      background: #ff6b00;
+      border-radius: 2px;
+      box-shadow: 0 0 6px rgba(255, 107, 0, 0.5);
+      transition: height 0.2s;
+    }
+
+    .rank-number {
+      width: 26px;
+      font-size: 14px;
+      font-weight: 900;
+      color: #444;
+      flex-shrink: 0;
+      text-align: center;
+      margin-right: 12px;
+    }
+
+    .rank-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-right: 12px;
+      position: relative;
+    }
+
+    .rank-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff6b00, #ff3d00);
+      border-radius: 2px;
+      box-shadow: 0 0 6px rgba(255, 107, 0, 0.3);
+    }
+
+    .rank-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #bbb;
+      flex-shrink: 0;
+      width: 120px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-right: 12px;
+    }
+
+    .rank-distance {
+      font-size: 13px;
+      font-weight: 800;
+      color: #888;
+      flex-shrink: 0;
+      text-align: right;
+      min-width: 70px;
+    }
+
+    /* ===== DIVIDER ===== */
     .divider {
       height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      margin: 12px 16px;
+      margin: 16px 40px;
+      background: linear-gradient(90deg, transparent, rgba(255, 107, 0, 0.3), transparent);
+      position: relative;
+      z-index: 2;
     }
 
-    .current-player-container {
-      padding: 0 16px;
+    /* ===== CURRENT PLAYER ===== */
+    .current-section {
+      margin: 0 20px;
+      position: relative;
+      z-index: 2;
     }
 
-    .current-player-title {
-      color: #aaaaaa;
-      font-size: 12px;
+    .current-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 2px;
       text-align: center;
       margin-bottom: 8px;
     }
 
-    .footer-note {
-      color: #666666;
+    .current-card {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(0, 200, 83, 0.1) 0%, rgba(0, 200, 83, 0.03) 100%);
+      border: 1px solid rgba(0, 200, 83, 0.2);
+      border-left: 3px solid #00c853;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 2px 12px rgba(0, 200, 83, 0.08);
+    }
+
+    .current-rank {
+      font-size: 18px;
+      font-weight: 900;
+      color: #00c853;
+      flex-shrink: 0;
+      margin-right: 12px;
+      min-width: 40px;
+      text-shadow: 0 0 8px rgba(0, 200, 83, 0.3);
+    }
+
+    .current-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #00c853;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .current-distance {
+      font-size: 15px;
+      font-weight: 800;
+      color: #00c853;
+      flex-shrink: 0;
+      text-shadow: 0 0 6px rgba(0, 200, 83, 0.3);
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
       font-size: 10px;
+      color: #333;
       text-align: center;
-      margin-top: 12px;
-      padding: 0 16px;
-      opacity: 0.8;
+      margin-top: 16px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 2;
+      letter-spacing: 0.5px;
     }
   </style>
 </head>
 <body>
   <div id="container">
+    <div class="racing-stripes"></div>
+    <div class="carbon-texture"></div>
+    <div class="neon-line-left"></div>
+    <div class="neon-line-right"></div>
+
     <div class="header">
-      <div class="title">🚗 行驶里程排行榜</div>
+      <span class="header-icon">🏁</span>
+      <div class="title" id="header-title">里程排行榜</div>
+      <div class="title-accent"></div>
+      <div class="subtitle" id="header-subtitle">MILEAGE RANKING</div>
     </div>
 
-    <div class="leaderboard-container">
-      <!-- 排行榜前10名 -->
-      <div id="top-rankings"></div>
-    </div>
+    <!-- #1 Hero -->
+    <div id="hero" class="hero" style="display:none;"></div>
 
-    <div class="divider"></div>
+    <!-- #2 & #3 Podium -->
+    <div id="podium-row" class="podium-row" style="display:none;"></div>
 
-    <div class="current-player-container">
-      <div class="current-player-title">你的排名</div>
+    <!-- #4-10 Rank List -->
+    <div id="rank-list" class="rank-list"></div>
+
+    <div id="divider" class="divider" style="display:none;"></div>
+
+    <!-- Current Player -->
+    <div id="current-section" class="current-section" style="display:none;">
+      <div class="current-title">你的排名</div>
       <div id="current-player"></div>
     </div>
 
-    <div class="footer-note" id="footer-note">
-      * 数据统计说明
-    </div>
+    <div id="footer" class="footer"></div>
   </div>
 
   <script>
-    function createLeaderboardItem(rank, playerName, mileage, isCurrentPlayer = false, isTop3 = false) {
-      const item = document.createElement('div');
-      item.className = `leaderboard-item${isTop3 ? ' top3' : ''}${isCurrentPlayer ? ' current-player' : ''}`;
-
-      let rankClass = '';
-      if (rank === 1) rankClass = 'top1';
-      else if (rank === 2) rankClass = 'top2';
-      else if (rank === 3) rankClass = 'top3';
-
-      item.innerHTML = `
-        <div class="item-content">
-          <div class="rank ${rankClass}">#${rank}</div>
-          <div class="player-info">
-            <div class="player-name">${playerName}</div>
-          </div>
-          <div class="mileage-value">${formatMileage(mileage)}</div>
-        </div>
-      `;
-
-      return item;
-    }
-
     function formatMileage(mileage) {
       const meters = parseInt(mileage);
-      if (isNaN(meters) || meters < 0) return '0 km';
-
+      if (isNaN(meters) || meters < 0) return { value: '0', unit: 'km' };
       const km = meters / 1000;
-
       if (km >= 1000000) {
-        const value = (km / 1000000).toFixed(2);
-        return value.endsWith('.00') ? Math.floor(km / 1000000) + 'M km' : value + 'M km';
+        const v = (km / 1000000).toFixed(2);
+        return { value: v.endsWith('.00') ? Math.floor(km / 1000000) + '' : v, unit: 'M km' };
       } else if (km >= 1000) {
-        const value = (km / 1000).toFixed(2);
-        return value.endsWith('.00') ? Math.floor(km / 1000) + 'K km' : value + 'K km';
+        const v = (km / 1000).toFixed(2);
+        return { value: v.endsWith('.00') ? Math.floor(km / 1000) + '' : v, unit: 'K km' };
       } else if (km >= 1) {
-        return Math.floor(km).toLocaleString() + ' km';
+        return { value: Math.floor(km).toLocaleString(), unit: 'km' };
       } else {
-        return meters.toLocaleString() + ' m';
+        return { value: meters.toLocaleString(), unit: 'm' };
       }
     }
 
-    // 新增：处理来自后端的动态数据
+    function fmtDist(mileage) {
+      const r = formatMileage(mileage);
+      return r.value + ' ' + r.unit;
+    }
+
+    function avatarHtml(url, name) {
+      const fb = (name || '?').charAt(0).toUpperCase();
+      return `<div style="position:relative;width:100%;height:100%;">
+        <img src="${url || ''}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div style="display:none;position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,#ff6b00,#ff3d00);align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;">${fb}</div>
+      </div>`;
+    }
+
     function setData(apiData) {
-      if (!apiData) {
-        console.error('数据无效');
-        return;
+      if (!apiData) return;
+
+      const titles = { 1: '总里程排行榜', 2: '今日里程排行榜' };
+      const subs = { 1: 'ALL-TIME MILEAGE RANKING', 2: 'TODAY\'S MILEAGE RANKING' };
+      const footers = { 1: '* 数据自 2025年8月23日 20:00 开始统计', 2: '* 每日 0:00 重置统计' };
+
+      document.getElementById('header-title').textContent = titles[apiData.rankingType] || '里程排行榜';
+      document.getElementById('header-subtitle').textContent = subs[apiData.rankingType] || 'MILEAGE RANKING';
+      document.getElementById('footer').textContent = footers[apiData.rankingType] || '';
+
+      const list = (apiData.mileageRankingList || []).slice(0, 10);
+      const maxDist = list.length > 0 ? Math.max(...list.map(p => parseInt(p.distance) || 0)) : 1;
+
+      // #1 Hero
+      if (list[0]) {
+        const p = list[0];
+        const d = formatMileage(p.distance);
+        document.getElementById('hero').style.display = '';
+        document.getElementById('hero').innerHTML = `
+          <div class="hero-crown">👑</div>
+          <div class="hero-info">
+            <div class="hero-name">${p.tmpName || '未知'}</div>
+            <div class="hero-rank">#1 LEADER</div>
+          </div>
+          <div class="hero-distance">${d.value}<span class="hero-distance-unit">${d.unit}</span></div>`;
       }
 
-      // 设置标题和底部脚注
-      const titleElement = document.querySelector('.header .title');
-      const footerElement = document.getElementById('footer-note');
-
-      if (titleElement) {
-        const titles = {
-          1: '- 总行驶里程排行榜 -',
-          2: '- 今日行驶里程排行榜 -'
-        };
-        const footerNotes = {
-          1: '* 数据自 2025年8月23日 20:00 开始统计',
-          2: '* 每日 0:00 重置统计'
-        };
-
-        titleElement.textContent = titles[apiData.rankingType] || '🚗 行驶里程排行榜';
-        if (footerElement) {
-          footerElement.textContent = footerNotes[apiData.rankingType] || '* 数据统计说明';
-        }
-      }
-
-      const topRankings = document.getElementById('top-rankings');
-      const currentPlayerContainer = document.getElementById('current-player');
-
-      // 清空现有内容
-      topRankings.innerHTML = '';
-      currentPlayerContainer.innerHTML = '';
-
-      // 渲染前10名排行榜
-      if (apiData.mileageRankingList && Array.isArray(apiData.mileageRankingList)) {
-        apiData.mileageRankingList.slice(0, 10).forEach((player) => {
-          if (player && player.tmpName && typeof player.distance !== 'undefined' && typeof player.ranking !== 'undefined') {
-            const isTop3 = player.ranking <= 3;
-            const item = createLeaderboardItem(player.ranking, player.tmpName, player.distance, false, isTop3);
-            topRankings.appendChild(item);
-          }
+      // #2 & #3
+      if (list[1] || list[2]) {
+        document.getElementById('podium-row').style.display = '';
+        let html = '';
+        [list[1], list[2]].forEach((p, i) => {
+          if (!p) return;
+          const cls = i === 0 ? 'second' : 'third';
+          const medal = i === 0 ? '🥈' : '🥉';
+          html += `
+            <div class="podium-card ${cls}">
+              <div class="podium-medal">${medal}</div>
+              <div class="podium-card-info">
+                <div class="podium-card-name">${p.tmpName || '未知'}</div>
+              </div>
+              <div class="podium-card-dist">${fmtDist(p.distance)}</div>
+            </div>`;
         });
+        document.getElementById('podium-row').innerHTML = html;
       }
 
-      // 渲染当前玩家排名
-      if (apiData.playerMileageRanking && apiData.playerMileageRanking.tmpName && typeof apiData.playerMileageRanking.ranking !== 'undefined') {
-        const currentItem = createLeaderboardItem(
-          apiData.playerMileageRanking.ranking,
-          apiData.playerMileageRanking.tmpName,
-          apiData.playerMileageRanking.distance,
-          true,
-          false
-        );
-        currentPlayerContainer.appendChild(currentItem);
-      } else {
-        // 如果没有当前玩家数据，隐藏该部分
-        const divider = document.querySelector('.divider');
-        const currentPlayerSection = document.querySelector('.current-player-container');
-        if (divider) divider.style.display = 'none';
-        if (currentPlayerSection) currentPlayerSection.style.display = 'none';
+      // #4-10 with progress bar
+      const rankList = document.getElementById('rank-list');
+      rankList.innerHTML = '';
+      for (let i = 3; i < list.length; i++) {
+        const p = list[i];
+        const pct = Math.max(5, ((parseInt(p.distance) || 0) / maxDist) * 100);
+        rankList.innerHTML += `
+          <div class="rank-item">
+            <div class="rank-number">${p.ranking}</div>
+            <div class="rank-name">${p.tmpName || '未知'}</div>
+            <div class="rank-bar"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
+            <div class="rank-distance">${fmtDist(p.distance)}</div>
+          </div>`;
+      }
+
+      // Current Player
+      const cp = apiData.playerMileageRanking;
+      if (cp && cp.tmpName && typeof cp.ranking !== 'undefined') {
+        document.getElementById('divider').style.display = '';
+        document.getElementById('current-section').style.display = '';
+        document.getElementById('current-player').innerHTML = `
+          <div class="current-card">
+            <div class="current-rank">#${cp.ranking}</div>
+            <div class="current-name">${cp.tmpName}</div>
+            <div class="current-distance">${fmtDist(cp.distance)}</div>
+          </div>`;
       }
     }
-
-    function init(data) {
-      if (!data) {
-        console.error('数据无效');
-        return;
-      }
-
-      const topRankings = document.getElementById('top-rankings');
-      const currentPlayerContainer = document.getElementById('current-player');
-
-      // 清空现有内容
-      topRankings.innerHTML = '';
-      currentPlayerContainer.innerHTML = '';
-
-      // 渲染前10名排行榜
-      if (data.topRankings && Array.isArray(data.topRankings)) {
-        data.topRankings.slice(0, 10).forEach((player, index) => {
-          if (player && player.name && typeof player.mileage !== 'undefined') {
-            const rank = index + 1;
-            const isTop3 = rank <= 3;
-            const item = createLeaderboardItem(rank, player.name, player.mileage, false, isTop3);
-            topRankings.appendChild(item);
-          }
-        });
-      }
-
-      // 渲染当前玩家排名
-      if (data.currentPlayer && data.currentPlayer.name && typeof data.currentPlayer.rank !== 'undefined') {
-        const currentItem = createLeaderboardItem(
-          data.currentPlayer.rank,
-          data.currentPlayer.name,
-          data.currentPlayer.mileage,
-          true,
-          false
-        );
-        currentPlayerContainer.appendChild(currentItem);
-      } else {
-        // 如果没有当前玩家数据，隐藏该部分
-        const divider = document.querySelector('.divider');
-        const currentPlayerSection = document.querySelector('.current-player-container');
-        if (divider) divider.style.display = 'none';
-        if (currentPlayerSection) currentPlayerSection.style.display = 'none';
-      }
-    }
-
-    // 示例数据 - 实际使用时将被外部数据替换
-    const sampleData = {
-      topRankings: [
-        { name: "Afo780", mileage: 347167 },
-        { name: "lαdу ναlєяijα", mileage: 331177 },
-        { name: "Stefan Z", mileage: 330658 },
-        { name: "YorkshireSlacka", mileage: 328871 },
-        { name: "Sun      [PL]", mileage: 327208 },
-        { name: "joewales96 LAG", mileage: 324952 },
-        { name: "Turbo_Express", mileage: 320211 },
-        { name: "gapcio9933", mileage: 319599 },
-        { name: "R8 anderson", mileage: 319004 },
-        { name: "lorddarki85", mileage: 317788 }
-      ],
-      currentPlayer: {
-        rank: 3365,
-        name: "ZyRoX Drum",
-        mileage: 59515
-      }
-    };
-
-    // 页面加载时初始化示例数据
-    document.addEventListener('DOMContentLoaded', function() {
-      init(sampleData);
-    });
   </script>
 </body>
 </html>
