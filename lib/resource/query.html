@@ -81,6 +81,11 @@
     .avatar-wrapper {
       position: relative;
       flex-shrink: 0;
+      display: none;
+    }
+
+    .avatar-wrapper.show {
+      display: block;
     }
 
     .avatar {
@@ -244,16 +249,21 @@
       color: #94a3b8;
       display: flex;
       align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
+      gap: 4px;
+      flex-shrink: 1;
+      white-space: nowrap;
+      min-width: 0;
     }
 
     .info-value {
       font-size: 13px;
       color: #e2e8f0;
       text-align: right;
-      word-break: break-all;
-      max-width: 60%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70%;
+      margin-left: 8px;
     }
 
     .info-value.gold {
@@ -478,11 +488,11 @@
       <div class="section-title">🚚 车队信息</div>
       <div class="info-row">
         <div class="info-label">🚚 所属车队</div>
-        <div class="info-value gold" id="tmp-vtc-name"></div>
+        <div class="info-value gold" id="tmp-vtc-name" style="white-space:normal;overflow:visible;text-overflow:unset;max-width:75%;"></div>
       </div>
       <div class="info-row">
         <div class="info-label">🚚 车队角色</div>
-        <div class="info-value" id="tmp-vtc-role"></div>
+        <div class="info-value" id="tmp-vtc-role" style="white-space:normal;overflow:visible;text-overflow:unset;max-width:75%;"></div>
       </div>
       <div id="vtc-history-container"></div>
       <div class="info-row" id="reward-points-row" style="display:none;">
@@ -606,7 +616,10 @@
 
     function init(data) {
       // Header
-      document.getElementById('tmp-avatar').src = data.avatarUrl;
+      if (data.showAvatar) {
+        document.querySelector('.avatar-wrapper').classList.add('show');
+        document.getElementById('tmp-avatar').src = data.avatarUrl;
+      }
       document.getElementById('tmp-name').innerText = data.name;
       document.getElementById('tmp-id').innerText = 'TMP#' + data.tmpId;
       document.getElementById('group-badge').innerText = data.groupName;

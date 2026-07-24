@@ -67,6 +67,7 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     let playerMapInfo = await truckyAppApi.online(ctx.http, tmpId);
     // 拼接数据
     let data = {};
+    data.showAvatar = cfg.tmpQuery?.showAvatar !== false;
     data.tmpId = playerInfo.data.tmpId;
     data.name = playerInfo.data.name;
     data.steamId = playerInfo.data.steamId;
