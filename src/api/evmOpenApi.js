@@ -17,13 +17,39 @@ module.exports = {
     /**
      * 查询服务器列表
      */
-    async serverList(http) {
+    async serverList(http, game) {
         let result = null
         try {
-            result = await requestWithFallback(http, '/server/list')
+            result = game === 'ATS'
+                ? await http.get('https://api.114512.xyz/truckersmp/servers')
+                : await requestWithFallback(http, '/server/list')
         } catch {
             return {
                 error: true
+            }
+        }
+
+        if (game === 'ATS') {
+            const servers = result?.response
+            const isError = result?.error === true || !Array.isArray(servers)
+            return {
+                error: isError,
+                ...(isError ? {} : {
+                    data: servers
+                        .filter(server => server.game === 'ATS')
+                        .map(server => ({
+                            serverName: server.name,
+                            isOnline: server.online ? 1 : 0,
+                            playerCount: server.players,
+                            maxPlayer: server.maxplayers,
+                            queueCount: server.queue || 0,
+                            afkEnable: server.afkenabled ? 1 : 0,
+                            collisionsEnable: server.collisions ? 1 : 0,
+                            policeCarEnable: server.policecarsforplayers ? 1 : 0,
+                            speedLimiterEnable: server.speedlimiter > 0 ? 1 : 0,
+                            playerHistory: []
+                        }))
+                })
             }
         }
 

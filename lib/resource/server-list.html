@@ -82,6 +82,13 @@
       text-shadow: 0 0 10px rgba(0, 200, 255, 0.4);
     }
 
+    .header .title span.game-title {
+      margin-left: 4px;
+      color: #e0f0ff;
+      text-shadow: none;
+      letter-spacing: 1px;
+    }
+
     .header-stats {
       margin-left: auto;
       display: flex;
@@ -307,7 +314,7 @@
 
   <div class="header">
     <span class="header-icon">📡</span>
-    <div class="title">TRUCKERS<span>MP</span> 服务器</div>
+    <div class="title">TRUCKERS<span>MP</span> <span class="game-title" id="game-title">服务器</span></div>
     <div class="header-stats">
       <div class="header-stat">
         <div class="header-stat-value" id="total-online">-</div>
@@ -436,6 +443,7 @@ function setData(apiData) {
   const servers = apiData.data;
   const listEl = document.getElementById('server-list');
   listEl.innerHTML = '';
+  document.getElementById('game-title').textContent = apiData.game === 'ATS' ? '美卡服务器' : '欧卡服务器';
 
   // Total online count
   const totalOnline = servers.reduce((sum, s) => sum + (s.playerCount || 0), 0);
