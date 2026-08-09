@@ -23,6 +23,7 @@ const commands = {
     addMember: require('./command/ets-app/addMember/addMemberV2'),
     pointRanking: require('./command/ets-app/pointRanking/pointRanking'),
     tmpVtc: require('./command/tmpVtc'),
+    tmpVtcOnline: require('./command/tmpVtcOnline/tmpVtcOnline'),
     tmpFootprint: require('./command/tmpFootprint')
 };
 const { ActivityService } = require('./command/tmpActivityService');
@@ -78,6 +79,7 @@ exports.Config = koishi_1.Schema.intersect([
             tmpMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用里程排行榜'),
             pointRanking: koishi_1.Schema.boolean().default(false).description('是否启用积分排行榜'),
             tmpVtc: koishi_1.Schema.boolean().default(true).description('是否启用VTC查询'),
+            tmpVtcOnline: koishi_1.Schema.boolean().default(true).description('是否启用车队在线成员查询功能'),
             tmpFootprint: koishi_1.Schema.boolean().default(true).description('是否启用足迹查询'),
             mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
             resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用车队平台重置密码功能'),
@@ -113,6 +115,12 @@ exports.Config = koishi_1.Schema.intersect([
                 koishi_1.Schema.const(2).description('图片')
             ]).default(1).description('服务器信息展示方式'),
         }).description('服务器查询配置'),
+        tmpVtcOnline: koishi_1.Schema.object({
+            type: koishi_1.Schema.union([
+                koishi_1.Schema.const(1).description('文字'),
+                koishi_1.Schema.const(2).description('图片')
+            ]).default(1).description('车队在线成员展示方式')
+        }).description('车队在线成员查询'),
 
         tmpVersionCheck: koishi_1.Schema.object({
             checkInterval: koishi_1.Schema.number().description("版本检查间隔（分钟）").default(30),
@@ -224,6 +232,7 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'tmpMileageRanking', label: '里程排行榜/今日里程排行榜' },
         { key: 'pointRanking', label: '积分排行榜' },
         { key: 'tmpVtc', label: 'vtc查询' },
+        { key: 'tmpVtcOnline', label: '车队在线成员' },
         { key: 'tmpFootprint', label: '足迹查询' },
         { key: 'resetPassword', label: '重置密码' },
         { key: 'mainSettings', label: '查询积分' },
@@ -307,6 +316,12 @@ function registerBaseCommands(ctx, cfg) {
         ctx.command('vtc查询 <vtcid>')
             .usage("查询TruckersMP VTC信息")
             .action(async ({ session }, vtcid) => await commands.tmpVtc(ctx, cfg, session, vtcid));
+    }
+
+    if (cfg.commands?.tmpVtcOnline) {
+        ctx.command('车队在线成员')
+            .usage('查询车队在线成员列表')
+            .action(async () => await commands.tmpVtcOnline(ctx, cfg));
     }
 
     if (cfg.commands?.tmpFootprint) {

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>车队在线成员</title>
+  <style>
+    @font-face {
+      font-family: 'segui-emj';
+      src: url('./package/SEGUIEMJ.TTF');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'segui-emj', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      color: #f8fbff;
+      background: #050711;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #container {
+      width: 760px;
+      min-height: 220px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 8% -8%, rgba(34, 211, 238, 0.24), transparent 30%),
+        radial-gradient(circle at 100% 0%, rgba(129, 140, 248, 0.22), transparent 33%),
+        radial-gradient(circle at 86% 100%, rgba(217, 70, 239, 0.12), transparent 28%),
+        linear-gradient(145deg, #0b1020 0%, #070a16 48%, #0c1021 100%);
+    }
+
+    #container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.32;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+      background-size: 26px 26px;
+      mask-image: linear-gradient(to bottom, black, transparent 85%);
+    }
+
+    #container::after {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 24%;
+      width: 360px;
+      height: 180px;
+      pointer-events: none;
+      background: rgba(56, 189, 248, 0.10);
+      filter: blur(70px);
+      transform: rotate(-8deg);
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 17px 18px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035));
+      box-shadow:
+        0 18px 42px rgba(0, 0, 0, 0.30),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(24px) saturate(1.25);
+      -webkit-backdrop-filter: blur(24px) saturate(1.25);
+    }
+
+    .header-mark {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(103, 232, 249, 0.35);
+      border-radius: 15px;
+      color: #67e8f9;
+      font-size: 23px;
+      background: linear-gradient(145deg, rgba(34, 211, 238, 0.24), rgba(99, 102, 241, 0.14));
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+
+    .header-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .eyebrow {
+      color: #67e8f9;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2.6px;
+      text-transform: uppercase;
+    }
+
+    .title {
+      margin-top: 4px;
+      color: #f8fafc;
+      font-size: 23px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-shadow: 0 0 20px rgba(125, 211, 252, 0.22);
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: #94a3b8;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 16px 2px 10px;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+    }
+
+    .section-heading::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(103, 232, 249, 0.32), transparent);
+    }
+
+    .section-heading::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #67e8f9;
+      box-shadow: 0 0 10px rgba(103, 232, 249, 0.75);
+    }
+
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .card {
+      min-height: 0;
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(52, 211, 153, 0.28);
+      border-radius: 17px;
+      background: linear-gradient(145deg, rgba(16, 185, 129, 0.13), rgba(255, 255, 255, 0.045) 52%, rgba(99, 102, 241, 0.07));
+      box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.22),
+        0 0 18px rgba(52, 211, 153, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 45%);
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      right: -28px;
+      bottom: -38px;
+      width: 110px;
+      height: 90px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: rgba(52, 211, 153, 0.13);
+      filter: blur(25px);
+    }
+
+    .name,
+    .server {
+      position: relative;
+      z-index: 1;
+    }
+
+    .member-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
+
+    .name {
+      min-width: 0;
+      flex: 1;
+      color: #f8fafc;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.42;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .server {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex: 0 1 auto;
+      max-width: 45%;
+      min-width: 0;
+      overflow: hidden;
+      color: #cbd5e1;
+      font-size: 10px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .server-icon {
+      color: #67e8f9;
+      font-size: 12px;
+    }
+
+    .empty {
+      padding: 28px 20px;
+      border: 1px dashed rgba(148, 163, 184, 0.24);
+      border-radius: 17px;
+      color: #94a3b8;
+      text-align: center;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="content">
+      <div class="header">
+        <div class="header-mark">🚚</div>
+        <div class="header-copy">
+          <div class="eyebrow">VTC LIVE MONITOR</div>
+          <div class="title">车队在线成员</div>
+          <div class="subtitle" id="subtitle"></div>
+        </div>
+      </div>
+
+      <div class="section-heading">在线成员</div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <script>
+    function setData(data) {
+      const members = data.members || [];
+      const onlineMembers = data.onlineMembers || [];
+      const rows = data.rows || [];
+
+      document.getElementById('subtitle').textContent = `在线 ${onlineMembers.length} / ${members.length}`;
+
+      const grid = document.getElementById('grid');
+      if (!onlineMembers.length) {
+        grid.innerHTML = '<div class="empty">当前没有成员在线</div>';
+        return;
+      }
+
+      grid.innerHTML = rows.map((row) => `
+        <div class="row">
+          ${row.map((item) => `
+            <div class="card">
+              <div class="member-info">
+                <div class="name">${item.name}</div>
+                <div class="server"><span class="server-icon">◈</span>${item.serverName || '未知服务器'}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
