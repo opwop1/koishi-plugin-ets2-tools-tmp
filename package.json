@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-ets2-tools-tmp",
   "description": "欧卡2 TruckersMP信息查询、车队平台查询及活动提醒",
-  "version": "3.1.7",
+  "version": "3.1.8",
   "contributors": [
     "opwop <slhp1013@qq.com>",
     "bot_actions <168329908@qq.com>"

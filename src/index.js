@@ -79,7 +79,7 @@ exports.Config = koishi_1.Schema.intersect([
             tmpMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用里程排行榜'),
             pointRanking: koishi_1.Schema.boolean().default(false).description('是否启用积分排行榜'),
             tmpVtc: koishi_1.Schema.boolean().default(true).description('是否启用VTC查询'),
-            tmpVtcOnline: koishi_1.Schema.boolean().default(true).description('是否启用车队在线成员查询功能'),
+            tmpVtcOnline: koishi_1.Schema.boolean().default(false).description('是否启用车队在线成员查询功能'),
             tmpFootprint: koishi_1.Schema.boolean().default(true).description('是否启用足迹查询'),
             mainSettings: koishi_1.Schema.boolean().default(false).description('是否启用车队平台积分查询功能'),
             resetPassword: koishi_1.Schema.boolean().default(false).description('是否启用车队平台重置密码功能'),

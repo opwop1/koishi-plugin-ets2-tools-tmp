@@ -1,4 +1,4 @@
-const BASE_API = 'https://api.114512.xyz/ets2map';
+const BASE_API = 'https://evmapi.114512.xyz/proxy/ets2map';
 // const BASE_API = 'https://tracker.ets2map.com';
 module.exports = {
     /**
