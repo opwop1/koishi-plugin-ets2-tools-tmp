@@ -17,6 +17,7 @@ const commands = {
     tmpVersion: require('./command/tmpVersion'),
     tmpDlcMap: require('./command/tmpDlcMap'),
     tmpMileageRanking: require('./command/tmpMileageRanking'),
+    tmpVtcMileageRanking: require('./command/tmpVtcMileageRanking'),
     resetPassword: require('./command/ets-app/resetPassword/resetPassword'),
     queryPoint: require('./command/ets-app/queryPoint/queryPoint'),
     changePoint: require('./command/ets-app/changePoint/changePoint'),
@@ -77,6 +78,7 @@ exports.Config = koishi_1.Schema.intersect([
             tmpVersion: koishi_1.Schema.boolean().default(true).description('是否启用版本查询'),
             tmpDlcMap: koishi_1.Schema.boolean().default(true).description('是否启用DLC地图查询'),
             tmpMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用里程排行榜'),
+            tmpVtcMileageRanking: koishi_1.Schema.boolean().default(true).description('是否启用VTC里程排行榜'),
             pointRanking: koishi_1.Schema.boolean().default(false).description('是否启用积分排行榜'),
             tmpVtc: koishi_1.Schema.boolean().default(true).description('是否启用VTC查询'),
             tmpVtcOnline: koishi_1.Schema.boolean().default(false).description('是否启用车队在线成员查询功能'),
@@ -230,6 +232,7 @@ function logDisabledCommands(ctx, cfg) {
         { key: 'tmpVersion', label: 'tmp版本' },
         { key: 'tmpDlcMap', label: '地图dlc价格' },
         { key: 'tmpMileageRanking', label: '里程排行榜/今日里程排行榜' },
+        { key: 'tmpVtcMileageRanking', label: 'vtc里程排行榜/vtc今日里程排行榜' },
         { key: 'pointRanking', label: '积分排行榜' },
         { key: 'tmpVtc', label: 'vtc查询' },
         { key: 'tmpVtcOnline', label: '车队在线成员' },
@@ -304,6 +307,16 @@ function registerBaseCommands(ctx, cfg) {
         ctx.command('今日里程排行榜')
             .usage("查询欧洲卡车模拟2今日里程排行榜")
             .action(async ({ session }) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.today));
+    }
+
+    if (cfg.commands?.tmpVtcMileageRanking) {
+        ctx.command('vtc里程排行榜')
+            .usage("查询车队总里程排行榜")
+            .action(async ({ session }) => await commands.tmpVtcMileageRanking(ctx, cfg, session, MileageRankingType.total));
+
+        ctx.command('vtc今日里程排行榜')
+            .usage("查询车队今日里程排行榜")
+            .action(async ({ session }) => await commands.tmpVtcMileageRanking(ctx, cfg, session, MileageRankingType.today));
     }
 
     if (cfg.commands?.pointRanking) {

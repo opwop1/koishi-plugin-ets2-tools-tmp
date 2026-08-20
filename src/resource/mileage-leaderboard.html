@@ -486,8 +486,11 @@
     function setData(apiData) {
       if (!apiData) return;
 
-      const titles = { 1: '总里程排行榜', 2: '今日里程排行榜' };
-      const subs = { 1: 'ALL-TIME MILEAGE RANKING', 2: 'TODAY\'S MILEAGE RANKING' };
+      const isVtc = !!apiData.isVtc;
+      const titles = isVtc ? { 1: 'VTC总里程排行榜', 2: 'VTC今日里程排行榜' } : { 1: '总里程排行榜', 2: '今日里程排行榜' };
+      const subs = isVtc
+        ? { 1: 'VTC ALL-TIME MILEAGE RANKING', 2: 'VTC TODAY\'S MILEAGE RANKING' }
+        : { 1: 'ALL-TIME MILEAGE RANKING', 2: 'TODAY\'S MILEAGE RANKING' };
       const footers = { 1: '* 数据自 2025年8月23日 20:00 开始统计', 2: '* 每日 0:00 重置统计' };
 
       document.getElementById('header-title').textContent = titles[apiData.rankingType] || '里程排行榜';
