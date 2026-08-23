@@ -1,3 +1,4 @@
+const evmOpenApi = require('../../api/evmOpenApi');
 module.exports = async (ctx, cfg) => {
   const vtcId = cfg.tmpActivityService?.api?.vtcId;
   if (!vtcId) {
@@ -6,12 +7,12 @@ module.exports = async (ctx, cfg) => {
 
   let result;
   try {
-    result = await ctx.http.get(`https://www.cnly.top/api/player_online/api?vtcId=${encodeURIComponent(vtcId)}`);
+    result = await evmOpenApi.vtcOnlineList(ctx.http, vtcId);
   } catch {
     return '查询车队在线成员失败，请稍后重试';
   }
 
-  if (!result || result.code !== 200 || !Array.isArray(result.data)) {
+  if (result.error || !Array.isArray(result.data)) {
     return '查询车队在线成员失败，请稍后重试';
   }
 
