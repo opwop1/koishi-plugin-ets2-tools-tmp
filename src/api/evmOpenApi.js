@@ -1,4 +1,4 @@
-const BASE_APIS = ['https://evmapi.114512.xyz']
+const BASE_APIS = ['https://evmapi.cxnnn.cn']
 
 async function requestWithFallback(http, path) {
     let lastError = null
