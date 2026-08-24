@@ -62,6 +62,16 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
     endTime = yesterday.endOf('day').format('YYYY-MM-DD HH:mm:ss');
   }
 
+  if (date === 'year') {
+    startTime = dayjs().subtract(1, 'year').startOf('year').startOf('day').format('YYYY-MM-DD HH:mm:ss');
+    endTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
+  }
+
+  if (date === 'month') {
+    startTime = dayjs().subtract(1, 'month').startOf('month').startOf('day').format('YYYY-MM-DD HH:mm:ss');
+    endTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
+  }
+
   if (date === 'today') {
     startTime = dayjs().startOf('day').format('YYYY-MM-DD HH:mm:ss');
     endTime = dayjs().endOf('day').format('YYYY-MM-DD HH:mm:ss');
