@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <title>玩家足迹展示</title>
@@ -19,77 +19,161 @@
     }
     #container {
       width: 800px;
-      height: 600px;
-      background: #1a1a1a;
+      height: 800px;
+      background: #0b0f1a;
       overflow: hidden;
       position: relative;
     }
-    .status-bar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 32px;
-      background-color: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
-      box-shadow: 0 -2px 10px rgba(0, 0, 0, .5);
-      z-index: 1001;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    .status-bar .avatar {
-      width: 20px;
-      height: 20px;
-      border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      margin-right: 8px;
-    }
-    .status-bar .info {
-      flex: 1;
-      display: flex;
-      align-items: center;
-    }
-    .status-bar .info .name {
-      color: #b0c7ff;
-      font-weight: 600;
-    }
-    .status-bar .stats {
-      display: flex;
-      align-items: center;
-      color: #aaaaaa;
-    }
-    .status-bar .stats .label {
-      margin-right: 6px;
-    }
-    .status-bar .stats .value {
-      font-weight: bold;
-      color: #54d354;
-    }
-
-    #map-box {
+    #map-box, #map {
       width: 100%;
       height: 100%;
     }
     #map {
-      width: 100%;
-      height: 100%;
       background-color: rgba(0, 0, 0, 0.25);
     }
 
-    .marker-label {
-      background: rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
-      color: #fff;
-      padding: 2px 6px;
-      font-size: 12px;
-      white-space: nowrap;
+    /* 氛围层：暗角 + 上下压暗，纯装饰悬浮层，不参与坐标换算 */
+    .atmo {
+      position: absolute;
+      inset: 0;
+      z-index: 500;
+      pointer-events: none;
+      background:
+        radial-gradient(140% 100% at 50% 40%, rgba(3, 7, 18, 0) 55%, rgba(3, 7, 18, .38) 100%),
+        linear-gradient(to top, rgba(3, 7, 18, .5), transparent 26%),
+        linear-gradient(to bottom, rgba(3, 7, 18, .35), transparent 18%);
     }
+
+    .glass {
+      background: linear-gradient(135deg, rgba(13, 20, 38, .82), rgba(9, 13, 26, .66));
+      border: 1px solid rgba(125, 211, 252, .22);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .06);
+    }
+
+    /* 顶部玩家卡片 */
+    .header {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px 10px 12px;
+      border-radius: 14px;
+    }
+    .header .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 11px;
+      border: 1px solid rgba(148, 197, 255, .5);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, .12);
+    }
+    .header .kicker {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #7dd3fc;
+      margin-bottom: 3px;
+    }
+    .header .name {
+      font-size: 19px;
+      font-weight: 800;
+      color: #eaf2ff;
+      line-height: 1.2;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 2px 10px rgba(56, 189, 248, .35);
+    }
+
+    /* 底部状态栏 */
+    .status-bar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 11px 20px;
+      border-radius: 14px;
+      box-sizing: border-box;
+    }
+    .mileage-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 110px;
+    }
+    .mileage-block .label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #8fa3c8;
+    }
+    .mileage-block .value {
+      font-size: 21px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #4ade80, #a3e635);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    /* 区间里程用青色渐变，与轨迹线颜色呼应 */
+    .mileage-block .value.cyan {
+      background: linear-gradient(90deg, #22d3ee, #a5f3fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .v-divider {
+      width: 1px;
+      height: 30px;
+      background: rgba(255, 255, 255, .1);
+    }
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .legend .item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #9fb3d9;
+    }
+    .legend .line-sample {
+      width: 20px;
+      height: 4px;
+      border-radius: 2px;
+      background: #22d3ee;
+      box-shadow: 0 0 8px rgba(34, 211, 238, .8);
+    }
+    .legend .dot-sample {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-sizing: border-box;
+    }
+    .legend .start { background: #4ade80; }
+    .legend .end { background: #f87171; }
+
+    /* 数据说明（近一年足迹时显示统计开始日期） */
+    .note {
+      margin-left: auto;
+      font-size: 11px;
+      color: #fcd34d;
+      background: rgba(251, 191, 36, .1);
+      border: 1px solid rgba(251, 191, 36, .32);
+      padding: 5px 12px;
+      border-radius: 8px;
+      letter-spacing: .5px;
+    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -97,84 +181,78 @@
     <div id="map-box">
       <div id="map"></div>
     </div>
-    <div class="status-bar">
+    <div class="atmo"></div>
+
+    <div class="header glass">
       <img class="avatar" id="avatar" src="https://static.truckersmp.com/avatarsN/small/defaultavatar.png" alt="avatar"/>
-      <div class="info">
+      <div>
+        <div class="kicker" id="range-title">行驶足迹</div>
         <div class="name" id="username">测试玩家</div>
       </div>
-      <div class="stats" id="stats-box">
-        <span class="label">今日里程</span>
+    </div>
+
+    <div class="status-bar glass">
+      <div class="mileage-block">
+        <span class="label" id="mileage-label">今日里程</span>
         <span class="value" id="distance">0.0 km</span>
       </div>
+      <div class="v-divider" id="total-divider"></div>
+      <div class="mileage-block" id="total-mileage-block">
+        <span class="label">总里程</span>
+        <span class="value" id="total-distance">0.0 km</span>
+      </div>
+      <div class="v-divider"></div>
+      <div class="legend">
+        <div class="item"><span class="line-sample"></span>行驶轨迹</div>
+        <div class="item"><span class="dot-sample start"></span>起点</div>
+        <div class="item"><span class="dot-sample end"></span>终点</div>
+      </div>
+      <div class="note hidden" id="stats-note">足迹统计开始日期</div>
     </div>
   </div>
 
   <script src="./package/ets-map.js"></script>
   <script>
-    function calculateDistance(p1, p2) {
-      return Math.sqrt(Math.pow(p1.axisX - p2.axisX, 2) + Math.pow(p1.axisY - p2.axisY, 2));
+    function init(data) {
+      if (!data) return;
+
+      document.getElementById('username').innerText = data.name || 'Unknown';
+      document.getElementById('range-title').innerText = `${data.rangeText || ''} · 行驶足迹`;
+      if (data.smallAvatarUrl) {
+        document.getElementById('avatar').src = data.smallAvatarUrl;
+      }
+
+      // 里程（米转千米）：今日足迹显示今日里程；
+      // 其余显示该区间里程（API distance 字段累加）与玩家总里程
+      document.getElementById('mileage-label').innerText = data.mileageLabel || '今日里程';
+      const mileage = data.mileage || 0;
+      const km = Number((mileage / 1000).toFixed(1)).toLocaleString('zh-CN');
+      document.getElementById('distance').innerText = `${km} km`;
+
+      if (data.isToday === false) {
+        document.getElementById('distance').classList.add('cyan');
+        const totalKm = Number(((data.totalMileage || 0) / 1000).toFixed(1)).toLocaleString('zh-CN');
+        document.getElementById('total-distance').innerText = `${totalKm} km`;
+      } else {
+        // 今日足迹不显示总里程块
+        document.getElementById('total-mileage-block').classList.add('hidden');
+        document.getElementById('total-divider').classList.add('hidden');
+      }
+
+      // 近一年足迹显示统计开始日期
+      const noteEl = document.getElementById('stats-note');
+      if (data.dataStartDate) {
+        noteEl.innerText = `足迹统计开始日期：${data.dataStartDate}`;
+        noteEl.classList.remove('hidden');
+      }
+
+      // 轨迹的分段（断点判定）与抽稀已在 Node 侧完成，这里直接渲染
+      render(data.segments || [], data.mapType);
     }
-
-    function parseTime(timeStr) {
-      return new Date(timeStr.replace(/-/g, '/')).getTime();
-    }
-
-        function init(data) {
-          if (!data) return;
-
-          document.getElementById('username').innerText = (data.name || 'Unknown') + ' 的今日行驶足迹';
-          if (data.smallAvatarUrl) {
-              document.getElementById('avatar').src = data.smallAvatarUrl;
-          }
-
-          const points = (data.points || []).filter(p => !(p.axisX === 0 && p.axisY === 0 && p.heading === 0));
-          // 使用传入的今日里程数据（米转千米）
-          const mileage = data.todayMileage || 0;
-          const km = (mileage / 1000).toFixed(1);
-          document.getElementById('distance').innerText = `${km} km`;
-
-          if (points.length === 0) {
-            return;
-          }
-
-          const lines = [];
-          let currentLine = [];
-
-          if (points.length > 0) {
-            let first = points[0];
-            currentLine.push({ x: first.axisX, y: first.axisY });
-
-            for (let i = 1; i < points.length; i++) {
-              const prev = points[i - 1];
-              const curr = points[i];
-
-              let dist = calculateDistance(prev, curr);
-              dist = dist * 19;
-              const isDistJump = dist > 30000; // > 30km
-
-              let timeDiff = 0;
-              try {
-                 timeDiff = (parseTime(curr.updateTime) - parseTime(prev.updateTime)) / 1000;
-              } catch (e) { }
-
-              const isTimeJump = timeDiff > 90;
-              const isServerJump = prev.serverId !== curr.serverId;
-
-              if (isDistJump || isTimeJump || isServerJump) {
-                if (currentLine.length > 0) lines.push(currentLine);
-                currentLine = [];
-              }
-              currentLine.push({ x: curr.axisX, y: curr.axisY });
-            }
-            if (currentLine.length > 0) lines.push(currentLine);
-          }
-
-          render(lines, data.mapType);
-        }
     function render(lines, mapType) {
       const config = mapConfig[mapType];
 
-      // 边界
+      // 边界（坐标系换算逻辑保持原样，勿动）
       let bounds = L.latLngBounds(
         map.unproject([0, config.bounds.y], config.maxZoom),
         map.unproject([config.bounds.x, 0], config.maxZoom)
@@ -192,6 +270,9 @@
         reuseTiles: true
       }).addTo(map);
 
+      // Canvas 渲染器：大量分段与标记时性能远优于默认 SVG
+      const canvasRenderer = L.canvas({ padding: 0.3 });
+
       let allLatlngs = [];
 
       lines.forEach(points => {
@@ -204,18 +285,29 @@
           allLatlngs.push([unprojected.lat, unprojected.lng]);
         });
 
-        // 轨迹线
+        // 底层光晕线 + 主线，双层描边实现发光效果
         L.polyline(latlngs, {
-          color: '#3498db',
-          weight: 4,
-          opacity: 0.8,
-          lineJoin: 'round'
+          renderer: canvasRenderer,
+          color: '#0e7490',
+          weight: 9,
+          opacity: 0.35,
+          lineJoin: 'round',
+          lineCap: 'round'
+        }).addTo(map);
+        L.polyline(latlngs, {
+          renderer: canvasRenderer,
+          color: '#22d3ee',
+          weight: 3.5,
+          opacity: 1,
+          lineJoin: 'round',
+          lineCap: 'round'
         }).addTo(map);
 
         // 起点
         L.circleMarker(latlngs[0], {
-          radius: 4,
-          fillColor: '#2ecc71',
+          renderer: canvasRenderer,
+          radius: 4.5,
+          fillColor: '#4ade80',
           color: '#fff',
           weight: 2,
           fillOpacity: 1
@@ -223,17 +315,21 @@
 
         // 终点
         L.circleMarker(latlngs[latlngs.length - 1], {
-          radius: 4,
-          fillColor: '#e74c3c',
+          renderer: canvasRenderer,
+          radius: 4.5,
+          fillColor: '#f87171',
           color: '#fff',
           weight: 2,
           fillOpacity: 1
         }).addTo(map);
       });
 
-      // 自动适应
+      // 自动适应（预留上下 UI 卡片区域；容器为正方形，尽量让正方形瓦片图占满）
       if (allLatlngs.length > 0) {
-        map.fitBounds(L.latLngBounds(allLatlngs), { padding: [50, 50] });
+        map.fitBounds(L.latLngBounds(allLatlngs), {
+          paddingTopLeft: [60, 95],
+          paddingBottomRight: [60, 65]
+        });
       }
     }
   </script>
