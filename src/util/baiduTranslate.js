@@ -1,5 +1,6 @@
 const md5 = require('js-md5');
 const translateCache = require('../database/translateCache');
+const apiLog = require('./apiLog');
 const TRANSLATE_API = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
 module.exports = async (ctx, cfg, content, cache = true) => {
     if (!cfg.baiduTranslate.enable) {
@@ -18,7 +19,7 @@ module.exports = async (ctx, cfg, content, cache = true) => {
         result = await ctx.http.get(`${TRANSLATE_API}?q=${encodeURI(content)}&from=auto&to=zh&appid=${cfg.baiduTranslate.appId}&salt=${randomInt}&sign=${sign}`);
     } catch (error) {
         // 翻译失败时降级返回原文，不影响主流程
-        ctx.logger.error(`[TMP-BOT] 百度翻译请求失败: ${error.message || error}`);
+        ctx.logger.error(`[TMP-BOT] 百度翻译请求失败: ${apiLog.formatError(error)}`);
         return content;
     }
     if (result.error_code) {
