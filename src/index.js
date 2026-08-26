@@ -67,7 +67,8 @@ exports.inject = {
 
 exports.Config = koishi_1.Schema.intersect([
     koishi_1.Schema.object({
-        debugMode: koishi_1.Schema.boolean().default(false).description('启用调试模式（输出详细日志）')
+        debugMode: koishi_1.Schema.boolean().default(false).description('启用调试模式（输出详细日志）'),
+        apiRetryCount: koishi_1.Schema.number().default(2).min(0).max(10).step(1).description('API请求失败时的重试次数（0=不重试，默认2次）')
     }).description('基本配置'),
     koishi_1.Schema.object({
         commands: koishi_1.Schema.object({
@@ -439,7 +440,7 @@ function registerBaseCommands(ctx, cfg) {
 
 function apply(ctx, cfg) {
     // 初始化 API 请求日志（调试模式开启后，truckersmp/trucky 等接口会输出请求与错误日志）
-    apiLog.init(ctx, cfg.debugMode);
+    apiLog.init(ctx, cfg.debugMode, cfg.apiRetryCount);
 
     try {
         model(ctx);
