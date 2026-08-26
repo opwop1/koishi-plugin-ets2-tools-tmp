@@ -161,28 +161,12 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     data.ets2GameTime = null;
     data.atsGameTime = null;
     if (cfg.commands?.tmpQueryGameTime) {
-        try {
-            const steamApiKey = cfg.steamApi?.key;
-            if (steamApiKey) {
-                const steamId = playerInfo.data.steamId;
-                const url = `https://evmapi.cxnnn.cn/proxy/steam/IPlayerService/GetOwnedGames/v1?key=${steamApiKey}&steamid=${steamId}&appids_filter[0]=227300&appids_filter[1]=270880&include_played_free_games=1`;
-                const response = await ctx.http.get(url);
-                if (response.response && response.response.game_count > 0) {
-                    for (const game of response.response.games) {
-                        const playtimeMinutes = game.playtime_forever;
-                        const hours = Math.floor(playtimeMinutes / 60);
-                        const minutes = playtimeMinutes % 60;
-                        const playtime = `${hours}小时${minutes}分钟`;
-                        if (game.appid === 227300) {
-                            data.ets2GameTime = playtime;
-                        } else if (game.appid === 270880) {
-                            data.atsGameTime = playtime;
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            ctx.logger.error(`查询Steam游戏时长出错: ${error}`);
+        const steamApiKey = cfg.steamApi?.key;
+        if (steamApiKey) {
+            const steamId = playerInfo.data.steamId;
+            const gameTimes = await evmOpenApi.steamGameTime(ctx.http, steamApiKey, steamId);
+            data.ets2GameTime = gameTimes.ets2;
+            data.atsGameTime = gameTimes.ats;
         }
     }
     let page;

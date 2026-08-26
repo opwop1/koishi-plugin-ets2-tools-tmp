@@ -184,35 +184,11 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     
     // 查询Steam游戏时长
     async function getSteamGameTimes(steamId) {
-        try {
-            const steamApiKey = cfg.steamApi?.key;
-            if (!steamApiKey) {
-                return { ets2: null, ats: null };
-            }
-            const url = `https://evmapi.cxnnn.cn/proxy/steam/IPlayerService/GetOwnedGames/v1?key=${steamApiKey}&steamid=${steamId}&appids_filter[0]=227300&appids_filter[1]=270880&include_played_free_games=1`;
-            const response = await ctx.http.get(url);
-            const result = { ets2: null, ats: null };
-            
-            if (response.response && response.response.game_count > 0) {
-                for (const game of response.response.games) {
-                    const playtimeMinutes = game.playtime_forever;
-                    const hours = Math.floor(playtimeMinutes / 60);
-                    const minutes = playtimeMinutes % 60;
-                    const playtime = `${hours}小时${minutes}分钟`;
-                    
-                    if (game.appid === 227300) {
-                        result.ets2 = playtime;
-                    } else if (game.appid === 270880) {
-                        result.ats = playtime;
-                    }
-                }
-            }
-            
-            return result;
-        } catch (error) {
-            ctx.logger.error(`查询Steam游戏时长出错: ${error}`);
+        const steamApiKey = cfg.steamApi?.key;
+        if (!steamApiKey) {
             return { ets2: null, ats: null };
         }
+        return evmOpenApi.steamGameTime(ctx.http, steamApiKey, steamId);
     }
     
     // 获取欧卡和美卡游戏时长
