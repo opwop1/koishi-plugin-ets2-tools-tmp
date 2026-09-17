@@ -5,7 +5,6 @@ exports.ActivityService = void 0;
 const koishi_1 = require("koishi");
 
 const v1Methods = require('./tmpActivityService/tmpActivityServiceV1');
-const v2Methods = require('./tmpActivityService/tmpActivityServiceV2');
 
 class ActivityService {
     constructor(ctx, config) {
@@ -18,12 +17,7 @@ class ActivityService {
         this.timers = [];
         this.logger = this.initLogger();
 
-        const platformVersion = (this.cfg.mainSettings?.platformVersion || "v1").toLowerCase();
-        if (platformVersion === "v2") {
-            Object.assign(this, v2Methods);
-        } else {
-            Object.assign(this, v1Methods);
-        }
+        Object.assign(this, v1Methods);
     }
 
     initLogger() {

@@ -249,6 +249,27 @@
       // 轨迹的分段（断点判定）与抽稀已在 Node 侧完成，这里直接渲染
       render(data.segments || [], data.mapType);
     }
+    // 量出上下两张悬浮卡片（玩家卡片 / 底部统计栏）真实占用的高度，作为 fitBounds 的留白。
+    // 写死数字会随字号、名字长度、图例与「统计开始日期」提示的增减而失准，所以按真实布局测量。
+    function measureOverlayPadding(side, gap) {
+      side = side === undefined ? 60 : side;
+      gap = gap === undefined ? 14 : gap;
+      const box = document.getElementById('container').getBoundingClientRect();
+      const header = document.querySelector('.header');
+      const bar = document.querySelector('.status-bar');
+      let top = header ? Math.max(0, header.getBoundingClientRect().bottom - box.top) + gap : 0;
+      let bottom = bar ? Math.max(0, box.bottom - bar.getBoundingClientRect().top) + gap : 0;
+
+      // 兜底：万一下方留白过大，按比例压缩，至少给轨迹留 80px 高度
+      const maxY = box.height - 80;
+      if (top + bottom > maxY) {
+        const k = maxY / (top + bottom);
+        top = Math.round(top * k);
+        bottom = Math.round(bottom * k);
+      }
+      return { side: side, top: top, bottom: bottom };
+    }
+
     function render(lines, mapType) {
       const config = mapConfig[mapType];
 
@@ -324,11 +345,12 @@
         }).addTo(map);
       });
 
-      // 自动适应（预留上下 UI 卡片区域；容器为正方形，尽量让正方形瓦片图占满）
+      // 自动适应（按上下两张悬浮卡片的实测高度预留留白，轨迹不会被卡片压住）
       if (allLatlngs.length > 0) {
+        const pad = measureOverlayPadding();
         map.fitBounds(L.latLngBounds(allLatlngs), {
-          paddingTopLeft: [60, 95],
-          paddingBottomRight: [60, 65]
+          paddingTopLeft: [pad.side, pad.top],
+          paddingBottomRight: [pad.side, pad.bottom]
         });
       }
     }

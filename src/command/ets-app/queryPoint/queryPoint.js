@@ -1,10 +1,6 @@
 const queryPointV1 = require("./queryPointV1");
-const queryPointV2 = require("./queryPointV2");
 
 module.exports = async (ctx, cfg, session, targetQQ) => {
-  const { platformVersion } = cfg.mainSettings?.settings || {};
-  const platform = (platformVersion || "v1").toLowerCase();
-
   let queryQQ = targetQQ;
   if (!queryQQ) {
     queryQQ = session.userId;
@@ -29,10 +25,5 @@ module.exports = async (ctx, cfg, session, targetQQ) => {
     }
   }
 
-  switch (platform) {
-    case "v2":
-      return await queryPointV2(ctx, cfg, queryQQ);
-    default:
-      return await queryPointV1(ctx, cfg, queryQQ);
-  }
+  return await queryPointV1(ctx, cfg, queryQQ);
 };

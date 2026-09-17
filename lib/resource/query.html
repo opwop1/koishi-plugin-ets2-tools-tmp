@@ -13,6 +13,44 @@
       font-style: normal;
     }
 
+    /* ============================================================
+       设计令牌：整卡只用一套冷色玻璃体系
+       底色 Ink → 极光 Cyan/Indigo/Violet → 玻璃面 → 语义色(红/金/绿)
+       ============================================================ */
+    :root {
+      --ink-0: #05070f;
+      --ink-1: #080d1b;
+      --ink-2: #0c1426;
+
+      --glass-hi: rgba(255, 255, 255, 0.085);
+      --glass-mid: rgba(255, 255, 255, 0.032);
+      --glass-lo: rgba(255, 255, 255, 0.012);
+
+      --stroke: rgba(255, 255, 255, 0.09);
+      --stroke-hi: rgba(255, 255, 255, 0.16);
+
+      --t1: #eaf2ff;
+      --t2: #a3b4cf;
+      --t3: #7a8aa4;
+      --t-title: #cfe0f8;
+
+      --accent: #58d3ff;
+      --accent-2: #7b8cff;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --danger: #f87171;
+
+      --r-lg: 18px;
+      --r-md: 13px;
+      --r-sm: 10px;
+
+      --sheen-top: linear-gradient(90deg, transparent 5%, rgba(255, 255, 255, 0.16) 50%, transparent 95%);
+      --shadow-card:
+        0 12px 28px -18px rgba(0, 0, 0, 0.85),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -21,67 +59,107 @@
 
     body {
       font-family: 'segui-emj', 'Segoe UI', -apple-system, sans-serif;
-      background: #080c20;
+      background: var(--ink-0);
       -webkit-font-smoothing: antialiased;
     }
 
+    /* ============================================================
+       卡片底：墨蓝渐变 + 极光光斑 + 磨砂噪点
+       ============================================================ */
     #container {
       width: 480px;
-      background: linear-gradient(160deg, #0a0e27 0%, #151338 30%, #0d1a3a 60%, #080c20 100%);
-      padding: 0 0 16px;
+      padding: 0 0 18px;
       overflow: hidden;
       position: relative;
+      background:
+        radial-gradient(900px 520px at 86% -8%, rgba(88, 211, 255, 0.11), transparent 62%),
+        radial-gradient(780px 540px at -12% 24%, rgba(123, 140, 255, 0.1), transparent 64%),
+        radial-gradient(700px 520px at 110% 70%, rgba(168, 132, 255, 0.07), transparent 66%),
+        linear-gradient(168deg, #0a1226 0%, #0a1020 40%, #080d1c 68%, #06090f 100%);
     }
 
-    /* Ambient glow orbs */
+    /* 磨砂玻璃的细颗粒 */
+    #container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.05;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* 顶部一道极细的高光边（玻璃器皿的棱） */
+    #container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.5px;
+      z-index: 5;
+      pointer-events: none;
+      background: linear-gradient(90deg,
+        rgba(88, 211, 255, 0.85), rgba(123, 140, 255, 0.7),
+        rgba(168, 132, 255, 0.5), rgba(88, 211, 255, 0.15));
+    }
+
+    /* 极光光斑：同色系，只做明暗层次 */
     .ambient-orb {
       position: absolute;
       border-radius: 50%;
       pointer-events: none;
-      filter: blur(60px);
+      filter: blur(70px);
       z-index: 0;
     }
 
     .ambient-orb.orb1 {
-      top: -40px;
-      right: -30px;
-      width: 180px;
-      height: 180px;
-      background: rgba(99, 102, 241, 0.18);
+      top: -70px;
+      right: -50px;
+      width: 260px;
+      height: 260px;
+      background: rgba(88, 211, 255, 0.16);
     }
 
     .ambient-orb.orb2 {
-      top: 200px;
-      left: -50px;
-      width: 140px;
-      height: 140px;
-      background: rgba(168, 85, 247, 0.12);
+      top: 210px;
+      left: -80px;
+      width: 240px;
+      height: 240px;
+      background: rgba(123, 140, 255, 0.14);
     }
 
     .ambient-orb.orb3 {
-      bottom: 80px;
-      right: -20px;
-      width: 120px;
-      height: 120px;
-      background: rgba(59, 130, 246, 0.1);
+      bottom: 60px;
+      right: -70px;
+      width: 230px;
+      height: 230px;
+      background: rgba(168, 132, 255, 0.11);
     }
 
     /* ===== HEADER ===== */
     .header {
-      padding: 24px 24px 18px;
+      padding: 23px 22px 18px;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 15px;
       position: relative;
       z-index: 1;
-      background: linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, transparent 100%);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      background: linear-gradient(180deg, rgba(88, 211, 255, 0.09) 0%, rgba(88, 211, 255, 0) 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .avatar-wrapper {
       position: relative;
       flex-shrink: 0;
+      padding: 2.5px;
+      border-radius: 50%;
       display: none;
+      background: conic-gradient(from 150deg, #58d3ff, #7b8cff 45%, #58d3ff 80%, #58d3ff);
+      box-shadow:
+        0 0 22px rgba(88, 211, 255, 0.32),
+        0 0 46px rgba(123, 140, 255, 0.18);
     }
 
     .avatar-wrapper.show {
@@ -92,32 +170,29 @@
       width: 72px;
       height: 72px;
       border-radius: 50%;
-      border: 2.5px solid rgba(139, 92, 246, 0.5);
-      box-shadow:
-        0 0 20px rgba(139, 92, 246, 0.35),
-        0 0 40px rgba(139, 92, 246, 0.15),
-        inset 0 0 12px rgba(139, 92, 246, 0.1);
+      display: block;
       object-fit: cover;
+      background: var(--ink-2);
     }
 
     .online-dot {
       position: absolute;
-      bottom: 2px;
-      right: 2px;
-      width: 14px;
-      height: 14px;
+      bottom: 1px;
+      right: 1px;
+      width: 15px;
+      height: 15px;
       border-radius: 50%;
-      border: 2.5px solid #0a0e27;
+      border: 3px solid #0a1020;
       z-index: 2;
     }
 
     .online-dot.online {
-      background: #22c55e;
-      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+      background: var(--ok);
+      box-shadow: 0 0 10px rgba(74, 222, 128, 0.7);
     }
 
     .online-dot.offline {
-      background: #6b7280;
+      background: #64748b;
     }
 
     .header-info {
@@ -128,75 +203,87 @@
     .player-name {
       font-size: 20px;
       font-weight: 700;
-      color: #f0f0ff;
+      color: #f3f8ff;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+      letter-spacing: 0.2px;
+      text-shadow: 0 0 26px rgba(88, 211, 255, 0.3);
     }
 
     .player-meta {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-top: 6px;
+      gap: 7px;
+      margin-top: 7px;
       flex-wrap: wrap;
     }
 
     .tmp-id {
-      font-size: 13px;
-      color: #94a3b8;
+      font-size: 12.5px;
+      color: var(--t2);
       font-weight: 500;
+      letter-spacing: 0.2px;
+      font-variant-numeric: tabular-nums;
     }
 
     .group-badge {
       font-size: 11px;
       font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
+      padding: 3px 9px;
+      border-radius: 9px;
       color: #fff;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
       letter-spacing: 0.3px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.28),
+        0 3px 10px -4px rgba(0, 0, 0, 0.7);
     }
 
     .status-badge {
       font-size: 11px;
       font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
+      padding: 3px 9px;
+      border-radius: 9px;
       letter-spacing: 0.3px;
+      backdrop-filter: blur(8px);
     }
 
     .status-badge.online {
-      background: rgba(34, 197, 94, 0.2);
-      color: #4ade80;
-      border: 1px solid rgba(34, 197, 94, 0.3);
+      background: rgba(74, 222, 128, 0.14);
+      color: #86efac;
+      border: 1px solid rgba(74, 222, 128, 0.34);
+      box-shadow: 0 0 14px -4px rgba(74, 222, 128, 0.6);
     }
 
     .status-badge.offline {
-      background: rgba(107, 114, 128, 0.2);
-      color: #9ca3af;
-      border: 1px solid rgba(107, 114, 128, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--t2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* ===== GLASS SECTIONS ===== */
+    /* ============================================================
+       玻璃板块：统一配方（磨砂 + 顶部高光 + 左上斜向反光 + 悬浮阴影）
+       ============================================================ */
     .section {
-      margin: 10px 16px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
+      --acc-line: rgba(88, 211, 255, 0.42);
+      --acc-tint: rgba(88, 211, 255, 0.06);
+      margin: 11px 14px;
       padding: 14px 16px;
-      backdrop-filter: blur(20px) saturate(1.2);
-      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      border-radius: var(--r-lg);
       position: relative;
       z-index: 1;
-      box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.15),
-        0 1px 2px rgba(255, 255, 255, 0.05) inset;
       overflow: hidden;
+      backdrop-filter: blur(22px) saturate(1.3);
+      -webkit-backdrop-filter: blur(22px) saturate(1.3);
+      background:
+        radial-gradient(130% 86% at 0% 0%, var(--acc-tint), transparent 62%),
+        linear-gradient(150deg, var(--glass-hi) 0%, var(--glass-mid) 46%, var(--glass-lo) 100%);
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow-card);
     }
 
-    /* Glass highlight on top */
+    /* 顶部 1px 高光 */
     .section::before {
       content: '';
       position: absolute;
@@ -204,16 +291,34 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent 5%, rgba(255, 255, 255, 0.12) 50%, transparent 95%);
       z-index: 2;
+      background: var(--sheen-top);
+    }
+
+    /* 左上角眩光 + 斜向反光，制造玻璃弧度 */
+    .section::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 58%;
+      z-index: 2;
+      pointer-events: none;
+      border-radius: inherit;
+      background:
+        radial-gradient(54% 46% at 0% 0%, rgba(255, 255, 255, 0.08), transparent 72%),
+        linear-gradient(122deg,
+          rgba(255, 255, 255, 0.05) 0%,
+          rgba(255, 255, 255, 0.012) 30%,
+          transparent 58%);
     }
 
     .section-title {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
-      color: #c4b5fd;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
+      color: var(--t-title);
+      letter-spacing: 1.1px;
       margin-bottom: 10px;
       display: flex;
       align-items: center;
@@ -226,8 +331,8 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: linear-gradient(90deg, rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.05), transparent);
       margin-left: 8px;
+      background: linear-gradient(90deg, var(--acc-line), rgba(255, 255, 255, 0) 80%);
     }
 
     /* ===== INFO ROWS ===== */
@@ -235,18 +340,19 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 5px 0;
+      gap: 10px;
+      padding: 6px 0;
       position: relative;
       z-index: 1;
     }
 
     .info-row + .info-row {
-      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      border-top: 1px solid rgba(255, 255, 255, 0.045);
     }
 
     .info-label {
-      font-size: 13px;
-      color: #94a3b8;
+      font-size: 12.5px;
+      color: var(--t2);
       display: flex;
       align-items: center;
       gap: 4px;
@@ -257,45 +363,49 @@
 
     .info-value {
       font-size: 13px;
-      color: #e2e8f0;
+      font-weight: 500;
+      color: var(--t1);
       text-align: right;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 70%;
       margin-left: 8px;
+      font-variant-numeric: tabular-nums;
     }
 
     .info-value.gold {
-      color: #fbbf24;
-      font-weight: 600;
-      text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+      color: var(--warn);
+      font-weight: 700;
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.28);
     }
 
     .info-value.green {
-      color: #4ade80;
+      color: #7ee7a5;
+      font-weight: 600;
     }
 
     .info-value.red {
-      color: #f87171;
+      color: #ff9c9c;
+      font-weight: 600;
     }
 
     .info-value.dim {
-      color: #6b7280;
+      color: var(--t3);
       font-size: 12px;
+      font-weight: 400;
     }
 
     /* ===== VTC HISTORY ===== */
     .vtc-history-item {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 10px 12px;
       margin-top: 8px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      padding: 10px 12px;
+      border-radius: var(--r-md);
       position: relative;
       z-index: 1;
+      background: linear-gradient(150deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.015) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
     .vtc-history-item + .vtc-history-item {
@@ -304,42 +414,39 @@
 
     .vtc-history-name {
       font-size: 13px;
-      color: #fbbf24;
+      color: var(--warn);
       font-weight: 600;
       margin-bottom: 4px;
     }
 
     .vtc-history-dates {
       font-size: 11px;
-      color: #64748b;
+      color: var(--t3);
     }
 
     /* ===== BAN SECTION ===== */
     .section.ban-section {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.03) 100%);
-      border-color: rgba(239, 68, 68, 0.15);
+      --acc-line: rgba(248, 113, 113, 0.5);
+      --acc-tint: rgba(248, 113, 113, 0.08);
     }
 
     .section.ban-section .section-title {
-      color: #f87171;
-    }
-
-    .section.ban-section .section-title::after {
-      background: linear-gradient(90deg, rgba(248, 113, 113, 0.4), rgba(248, 113, 113, 0.05), transparent);
+      color: #ffb4b4;
     }
 
     .ban-hidden-text {
-      color: #6b7280;
-      font-size: 13px;
+      color: var(--t3);
+      font-size: 12.5px;
       font-style: italic;
       text-align: center;
       padding: 4px 0;
+      position: relative;
+      z-index: 1;
     }
 
     /* ===== MAP SECTION ===== */
     .section.map-section {
       padding: 0;
-      overflow: hidden;
     }
 
     .map-section .section-title {
@@ -350,75 +457,70 @@
     .map-section #map {
       width: 100%;
       height: 180px;
-      border-radius: 0 0 16px 16px;
-      /* 未加载到瓦片的区域使用卡片同款深蓝底色，避免白底突兀 */
-      background: #0f1439;
+      border-radius: 0 0 var(--r-lg) var(--r-lg);
+      background: #0b1223;
+      position: relative;
     }
 
-    /* 瓦片暗色化：部分反转（0.6）让底色为浅中灰，色相回转 + 提饱和保持黄色道路鲜亮 */
+    /* 瓦片暗色化：整体偏冷，和卡片同色系 */
     .map-section .leaflet-tile-pane {
-      filter: invert(0.78) hue-rotate(180deg) saturate(1.35) brightness(2);
+      filter: invert(0.8) hue-rotate(185deg) saturate(1.15) brightness(1.9);
+    }
+
+    /* 地图上下压暗，让地图边缘融进玻璃卡片 */
+    .map-section #map::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 500;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(10, 16, 34, 0.55) 0%, rgba(10, 16, 34, 0) 42%),
+        linear-gradient(0deg, rgba(8, 13, 27, 0.6) 0%, rgba(8, 13, 27, 0) 34%);
+    }
+
+    .map-section .leaflet-control-attribution {
+      display: none;
     }
 
     /* ===== SPONSOR SECTION ===== */
     .section.sponsor-section {
-      background: linear-gradient(135deg, rgba(250, 204, 21, 0.08) 0%, rgba(250, 204, 21, 0.02) 100%);
-      border-color: rgba(250, 204, 21, 0.15);
+      --acc-line: rgba(251, 191, 36, 0.45);
+      --acc-tint: rgba(251, 191, 36, 0.055);
     }
 
     .section.sponsor-section .section-title {
-      color: #facc15;
-    }
-
-    .section.sponsor-section .section-title::after {
-      background: linear-gradient(90deg, rgba(250, 204, 21, 0.4), rgba(250, 204, 21, 0.05), transparent);
+      color: #ffd98a;
     }
 
     /* ===== GAME TIME SECTION ===== */
     .section.game-section {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
-      border-color: rgba(59, 130, 246, 0.15);
-    }
-
-    .section.game-section .section-title {
-      color: #60a5fa;
-    }
-
-    .section.game-section .section-title::after {
-      background: linear-gradient(90deg, rgba(96, 165, 250, 0.4), rgba(96, 165, 250, 0.05), transparent);
+      --acc-line: rgba(123, 140, 255, 0.45);
+      --acc-tint: rgba(123, 140, 255, 0.07);
     }
 
     /* ===== MILEAGE SECTION ===== */
     .section.mileage-section {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
-      border-color: rgba(16, 185, 129, 0.15);
+      --acc-line: rgba(52, 211, 153, 0.42);
+      --acc-tint: rgba(52, 211, 153, 0.06);
     }
 
-    .section.mileage-section .section-title {
-      color: #34d399;
-    }
-
-    .section.mileage-section .section-title::after {
-      background: linear-gradient(90deg, rgba(52, 211, 153, 0.4), rgba(52, 211, 153, 0.05), transparent);
-    }
-
-    /* ===== GLASS BAR (ban count, last online) ===== */
+    /* ===== GLASS BAR ===== */
     .glass-bar {
-      margin: 10px 16px;
+      margin: 11px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 16px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 12px;
-      backdrop-filter: blur(16px) saturate(1.1);
-      -webkit-backdrop-filter: blur(16px) saturate(1.1);
+      gap: 10px;
+      padding: 11px 16px;
+      border-radius: var(--r-md);
       position: relative;
       z-index: 1;
-      box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 1px 1px rgba(255, 255, 255, 0.04) inset;
+      backdrop-filter: blur(18px) saturate(1.2);
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      background: linear-gradient(150deg, var(--glass-hi) 0%, var(--glass-lo) 100%);
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow-card);
     }
 
     .glass-bar::before {
@@ -428,25 +530,290 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent 10%, rgba(255, 255, 255, 0.08) 50%, transparent 90%);
+      background: var(--sheen-top);
     }
 
     .glass-bar .info-label {
-      font-size: 13px;
+      font-size: 12.5px;
     }
 
     .glass-bar .info-value {
       font-size: 14px;
       font-weight: 700;
+      max-width: none;
     }
 
     .glass-bar .info-value.has-bans {
-      color: #f87171;
-      text-shadow: 0 0 6px rgba(248, 113, 113, 0.3);
+      color: #ff9c9c;
+      text-shadow: 0 0 10px rgba(248, 113, 113, 0.32);
     }
 
     .glass-bar .info-value.no-bans {
-      color: #4ade80;
+      color: #7ee7a5;
+    }
+
+    /* ============================================================
+       TELEMETRY（实时遥测）
+       ============================================================ */
+    .section.telemetry-section {
+      --acc-line: rgba(88, 211, 255, 0.45);
+      --acc-tint: rgba(88, 211, 255, 0.07);
+    }
+
+    .tl-meta {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--t3);
+      letter-spacing: 0.2px;
+      text-transform: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tl-live {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .tl-live.live {
+      background: var(--ok);
+      box-shadow: 0 0 7px rgba(74, 222, 128, 0.85);
+    }
+
+    .tl-live.stale {
+      background: #64748b;
+    }
+
+    /* 关键指标磁贴 */
+    .tl-tiles {
+      display: flex;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tl-tile {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 9px 5px 8px;
+      border-radius: var(--r-md);
+      text-align: center;
+      background: linear-gradient(150deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.022) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.09),
+        0 6px 16px -12px rgba(0, 0, 0, 0.8);
+    }
+
+    .tl-tile .v {
+      font-size: 17px;
+      font-weight: 700;
+      color: #f4faff;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 16px rgba(88, 211, 255, 0.35);
+    }
+
+    .tl-tile .k {
+      font-size: 10px;
+      color: var(--t3);
+      margin-top: 3px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 紧凑网格：一行 2 列，字段多了也不会拉得很长 */
+    .tl-grid {
+      display: grid;
+      gap: 6px 8px;
+      position: relative;
+      z-index: 1;
+      margin-top: 6px;
+    }
+
+    .tl-grid.cols-1 {
+      grid-template-columns: 1fr;
+    }
+
+    .tl-grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tl-grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tl-item {
+      min-width: 0;
+      padding: 5px 9px;
+      border-radius: var(--r-sm);
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.065);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .tl-item.wide {
+      grid-column: 1 / -1;
+    }
+
+    .tl-cell {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 29px;
+    }
+
+    .tl-cell-k {
+      font-size: 11px;
+      color: var(--t2);
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 0 0 auto;
+    }
+
+    .tl-cell-v {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--t1);
+      text-align: right;
+      flex: 1 1 auto;
+      min-width: 0;
+      word-break: break-word;
+      line-height: 1.25;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tl-cell-v.gold {
+      color: var(--warn);
+    }
+
+    .tl-cell-v.red {
+      color: #ff9c9c;
+    }
+
+    .tl-cell-v.dim {
+      color: var(--t3);
+      font-weight: 500;
+    }
+
+    .tl-cell-v.mono {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 11.5px;
+      letter-spacing: 0.2px;
+    }
+
+    /* 分组小标题 */
+    .tl-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #a9c8ef;
+      letter-spacing: 0.8px;
+      margin: 12px 0 0;
+      padding-left: 9px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tl-group-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 1px;
+      bottom: 1px;
+      width: 2.5px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--accent), rgba(88, 211, 255, 0.1));
+    }
+
+    /* 进度条（作为网格单元） */
+    .tl-bar {
+      position: relative;
+      z-index: 1;
+    }
+
+    .tl-bar-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      font-size: 11.5px;
+      margin-bottom: 5px;
+      gap: 8px;
+    }
+
+    .tl-bar-head .l {
+      color: var(--t2);
+      white-space: nowrap;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tl-bar-head .r {
+      font-weight: 700;
+      font-size: 12.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tl-bar-head .r .hint {
+      font-weight: 500;
+      color: var(--t3);
+      font-size: 11px;
+    }
+
+    .tl-bar-track {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.07);
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    .tl-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    /* 告警标签 */
+    .tl-warn-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+      padding-top: 3px;
+    }
+
+    .tl-warn-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 9px;
+      background: rgba(248, 113, 113, 0.13);
+      color: #fca5a5;
+      border: 1px solid rgba(248, 113, 113, 0.26);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .tl-warn-tag.urgent {
+      background: rgba(239, 68, 68, 0.26);
+      color: #fecaca;
+      border-color: rgba(239, 68, 68, 0.48);
+      box-shadow: 0 0 16px -6px rgba(239, 68, 68, 0.9);
     }
   </style>
 </head>
@@ -531,6 +898,12 @@
     <div class="section map-section" id="map-section" style="display:none;">
       <div class="section-title" id="map-title">🗺️ 位置地图</div>
       <div id="map"></div>
+    </div>
+
+    <!-- Telemetry Section (only shown for own VTC members) -->
+    <div class="section telemetry-section" id="telemetry-section" style="display:none;">
+      <div class="section-title">📡 实时遥测<span class="tl-meta" id="telemetry-meta"></span></div>
+      <div id="telemetry-body"></div>
     </div>
 
     <!-- Ban Section (only when banned) -->
@@ -621,6 +994,284 @@
       return val + ' 米';
     }
 
+    /* ==================================================================
+     * V1 车队平台 · 实时遥测
+     * 仅渲染「有值」的字段（null / undefined / 空串一律不显示）
+     * 已排除字段：id / tmpId / teamId / serverId / serverName / mapId /
+     *             axisX / axisY / heading / name / steamId / truckPlate
+     * 单位重复的字段只保留可读性更好的那个（m 与 km 二选一）
+     * ================================================================== */
+
+    // 告警灯：true 时显示对应标签
+    var TL_WARNINGS = [
+      ['fuelWarning', '油量告警', false],
+      ['adblueWarning', '尿素告警', false],
+      ['waterTempWarning', '水温告警', false],
+      ['oilPressureWarning', '油压告警', false],
+      ['batteryVoltageWarning', '电瓶电压告警', false],
+      ['brakeAirWarning', '刹车气压告警', false],
+      ['brakeAirEmergency', '刹车气压紧急告警', true]
+    ];
+
+    function tlHas(v) {
+      return v !== null && v !== undefined && v !== '';
+    }
+
+    function tlNum(v) {
+      return typeof v === 'number' && isFinite(v);
+    }
+
+    function tlText(v) {
+      return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function tlInt(v) {
+      return tlNum(v) ? Math.round(v).toLocaleString('en-US') : tlText(v);
+    }
+
+    function tlFixed(v, d) {
+      return tlNum(v) ? v.toFixed(d) : tlText(v);
+    }
+
+    // 分钟 → X时Y分（负数表示已超时）
+    function tlMinutes(min) {
+      if (!tlNum(min)) return null;
+      var neg = min < 0;
+      var t = Math.abs(Math.round(min));
+      return (neg ? '-' : '') + Math.floor(t / 60) + '时' + (t % 60) + '分';
+    }
+
+    // 秒 → X时Y分
+    function tlSeconds(sec) {
+      if (!tlNum(sec)) return null;
+      var t = Math.abs(Math.round(sec));
+      return Math.floor(t / 3600) + '时' + Math.floor((t % 3600) / 60) + '分';
+    }
+
+    function tlGear(g) {
+      if (!tlNum(g)) return null;
+      if (g > 0) return g + ' 挡';
+      if (g < 0) return '倒挡 R' + Math.abs(g);
+      return '空挡 N';
+    }
+
+    // 紧凑单元格：标签在左、值在右，一个网格单元只占一行的 1/2 宽
+    function tlCell(label, value, cls, mono) {
+      if (!tlHas(value)) return '';
+      var vcls = 'tl-cell-v' + (cls ? ' ' + cls : '') + (mono ? ' mono' : '');
+      return '<div class="tl-cell tl-item"><div class="tl-cell-k">' + label + '</div>' +
+        '<div class="' + vcls + '">' + value + '</div></div>';
+    }
+
+    // 把若干个单元格排成 cols 列；空串（无值字段）自动剔除。
+    // 若最后一格落单，则让它横向铺满，避免留下空位。
+    function tlGrid(cells, cols) {
+      var list = (cells || []).filter(tlHas);
+      if (!list.length) return '';
+      var c = cols || 2;
+      if (list.length % c === 1) {
+        list[list.length - 1] = list[list.length - 1].replace('class="', 'class="wide ');
+      }
+      return '<div class="tl-grid cols-' + c + '">' + list.join('') + '</div>';
+    }
+
+    function tlGroup(title, html) {
+      if (!html) return '';
+      return '<div class="tl-group-title">' + title + '</div>' + html;
+    }
+
+    // mode: fuel(低油量报警) / adblue / damage(越高越危险) / progress
+    function tlBar(label, pct, hint, mode) {
+      if (!tlNum(pct)) return '';
+      var p = Math.max(0, Math.min(100, pct));
+      var color;
+      if (mode === 'damage') {
+        color = p <= 10 ? '#4ade80' : (p <= 40 ? '#fbbf24' : '#f87171');
+      } else if (mode === 'adblue') {
+        color = p <= 10 ? '#f87171' : (p <= 25 ? '#fbbf24' : '#58d3ff');
+      } else if (mode === 'progress') {
+        color = p >= 99.5 ? '#4ade80' : '#58d3ff';
+      } else {
+        color = p <= 15 ? '#f87171' : (p <= 30 ? '#fbbf24' : '#4ade80');
+      }
+      return '<div class="tl-bar tl-item">' +
+        '<div class="tl-bar-head"><span class="l">' + label + '</span>' +
+        '<span class="r" style="color:' + color + ';">' + Math.round(p) + '%' +
+        (hint ? '<span class="hint"> · ' + hint + '</span>' : '') + '</span></div>' +
+        '<div class="tl-bar-track"><div class="tl-bar-fill" style="width:' + p + '%;background:linear-gradient(90deg,' + color + '44,' + color + ');"></div></div>' +
+        '</div>';
+    }
+
+    function buildTelemetry(telemetry) {
+      var pf = (telemetry && telemetry.player) || {};
+      var isLive = !!(telemetry && telemetry.online);
+
+      // ---- 标题右侧：LIVE 指示灯 + 数据时间 ----
+      var metaEl = document.getElementById('telemetry-meta');
+      if (metaEl) {
+        var timeText = '';
+        if (tlHas(pf.updateTimeCn)) timeText = tlText(pf.updateTimeCn).slice(11, 16);
+        else if (tlHas(pf.updateTime)) timeText = tlText(pf.updateTime).slice(11, 16);
+        else if (telemetry && tlHas(telemetry.generatedAt)) timeText = tlText(telemetry.generatedAt).slice(11, 16);
+        metaEl.innerHTML = '<span class="tl-live ' + (isLive ? 'live' : 'stale') + '"></span>' +
+          (timeText ? timeText : '') + (isLive ? '' : ' 离线数据');
+      }
+
+      var html = '';
+
+      /* ---------- ① 关键指标磁贴 ---------- */
+      var tiles = '';
+      function tile(label, value) {
+        if (!tlHas(value)) return;
+        tiles += '<div class="tl-tile"><div class="v">' + value + '</div><div class="k">' + label + '</div></div>';
+      }
+      tile('车速 km/h', tlNum(pf.speedKph) ? Math.round(pf.speedKph) : null);
+      tile('转速 RPM', tlNum(pf.rpm) ? Math.round(pf.rpm) : null);
+      tile('网络延迟 ms', tlNum(pf.ping) ? Math.round(pf.ping) : null);
+      tile('里程表 km', tlNum(pf.odometer) ? Math.round(pf.odometer).toLocaleString('en-US') : null);
+      if (tiles) html += '<div class="tl-tiles">' + tiles + '</div>';
+
+      /* ---------- ② 车辆与驾驶 ---------- */
+      var g1 = [];
+      if (tlHas(pf.truckBrand) || tlHas(pf.truckName)) {
+        g1.push(tlCell('🚚 驾驶车辆', tlText([pf.truckBrand, pf.truckName].filter(tlHas).join(' '))));
+      }
+      g1.push(tlCell('📍 所在城市', tlHas(pf.city) ? tlText(pf.city) : null));
+      g1.push(tlCell('⚙️ 显示档位', tlGear(pf.gear)));
+      if (tlNum(pf.engineGear) && pf.engineGear !== pf.gear) {
+        g1.push(tlCell('🔧 实际档位', tlGear(pf.engineGear)));
+      }
+      if (tlNum(pf.speedLimitKph) && pf.speedLimitKph > 0) {
+        g1.push(tlCell('🚧 导航限速', Math.round(pf.speedLimitKph) + ' km/h'));
+      }
+      var navKm = tlNum(pf.navDistanceKm) ? pf.navDistanceKm
+        : (tlNum(pf.navDistanceM) ? pf.navDistanceM / 1000 : null);
+      if (tlNum(navKm) && navKm > 0) {
+        g1.push(tlCell('🧭 导航剩余', navKm.toFixed(1) + ' km'));
+      }
+      var navTime = tlHas(pf.navTimeStr) ? tlText(pf.navTimeStr)
+        : (tlNum(pf.navTimeSec) && pf.navTimeSec > 0 ? tlSeconds(pf.navTimeSec) : null);
+      if (tlHas(navTime)) {
+        g1.push(tlCell('⏱️ 预计到达', navTime));
+      }
+      if (tlNum(pf.fuelRangeKm) && pf.fuelRangeKm > 0) {
+        g1.push(tlCell('🛣️ 剩余续航', Math.round(pf.fuelRangeKm) + ' km'));
+      }
+      if (tlNum(pf.fuelAvgConsL100) && pf.fuelAvgConsL100 > 0) {
+        g1.push(tlCell('⛽ 平均油耗', pf.fuelAvgConsL100.toFixed(1) + ' L/100km'));
+      }
+      if (tlNum(pf.restStopMin)) {
+        g1.push(tlCell('😴 强制休息', pf.restStopMin < 0
+          ? '已超时 ' + Math.abs(Math.round(pf.restStopMin)) + ' 分钟'
+          : Math.round(pf.restStopMin) + ' 分钟', pf.restStopMin < 0 ? 'red' : ''));
+      }
+      html += tlGroup('🚗 车辆与驾驶', tlGrid(g1, 2));
+
+      /* ---------- ③ 油量与液位 ---------- */
+      var g2 = [];
+      if (tlNum(pf.fuel)) {
+        g2.push(tlBar('油量', pf.fuel, tlNum(pf.fuelLiters) ? Math.round(pf.fuelLiters) + ' L' : '', 'fuel'));
+      } else {
+        g2.push(tlCell('⛽ 油量', tlNum(pf.fuelLiters) ? Math.round(pf.fuelLiters) + ' L' : null));
+      }
+      if (tlNum(pf.adbluePct)) {
+        g2.push(tlBar('尿素', pf.adbluePct, tlNum(pf.adblueLiters) ? Math.round(pf.adblueLiters) + ' L' : '', 'adblue'));
+      } else {
+        g2.push(tlCell('💧 尿素', tlNum(pf.adblueLiters) ? Math.round(pf.adblueLiters) + ' L' : null));
+      }
+      html += tlGroup('⛽ 油量与液位', tlGrid(g2, 2));
+
+      /* ---------- ④ 机况与压力 ---------- */
+      var g3 = [];
+      g3.push(tlCell('🌡️ 冷却液温度', tlNum(pf.waterTempC) ? tlFixed(pf.waterTempC, 1) + ' ℃' : null));
+      g3.push(tlCell('🌡️ 机油温度', tlNum(pf.oilTempC) ? tlFixed(pf.oilTempC, 1) + ' ℃' : null));
+      g3.push(tlCell('🛢️ 机油压力', tlNum(pf.oilPressure) ? tlFixed(pf.oilPressure, 1) + ' bar' : null));
+      g3.push(tlCell('🔋 电瓶电压', tlNum(pf.batteryVoltage) ? tlFixed(pf.batteryVoltage, 1) + ' V' : null));
+      g3.push(tlCell('💨 刹车气压', tlNum(pf.brakeAirPressure) ? tlFixed(pf.brakeAirPressure, 1) + ' bar' : null));
+      g3.push(tlCell('🔥 刹车温度', tlNum(pf.brakeTempC) ? tlFixed(pf.brakeTempC, 1) + ' ℃' : null));
+      html += tlGroup('🌡️ 机况与压力', tlGrid(g3, 2));
+
+      /* ---------- ⑤ 损毁情况 ---------- */
+      var g4 = [];
+      if (tlNum(pf.truckDamagePct)) g4.push(tlBar('车头损毁', pf.truckDamagePct, '', 'damage'));
+      if (tlNum(pf.trailerDamagePct)) g4.push(tlBar('挂车损毁', pf.trailerDamagePct, '', 'damage'));
+      if (tlNum(pf.cargoDamagePct)) g4.push(tlBar('货物损毁', pf.cargoDamagePct, '', 'damage'));
+      if (tlNum(pf.trailerCargoDamagePct)) g4.push(tlBar('挂车货物损毁', pf.trailerCargoDamagePct, '', 'damage'));
+      html += tlGroup('🛠️ 损毁情况', tlGrid(g4, 2));
+
+      /* ---------- ⑥ 当前任务 ---------- */
+      var g5 = [];
+      g5.push(tlCell('📦 货物名称', tlHas(pf.jobCargo) ? tlText(pf.jobCargo) : null, 'gold'));
+      if (tlNum(pf.jobIncome)) {
+        g5.push(tlCell('💰 运输报酬', '€' + Math.round(pf.jobIncome).toLocaleString('en-US'), 'gold'));
+      }
+      var srcCity = tlHas(pf.jobSrcCityCn) ? pf.jobSrcCityCn : pf.jobSrcCity;
+      var dstCity = tlHas(pf.jobDstCityCn) ? pf.jobDstCityCn : pf.jobDstCity;
+      if (tlHas(srcCity) || tlHas(dstCity)) {
+        g5.push(tlCell('🗺️ 运输路线', tlText((srcCity || '?') + ' → ' + (dstCity || '?'))));
+      }
+      if (tlHas(pf.jobSrcCompany) || tlHas(pf.jobDstCompany)) {
+        g5.push(tlCell('🏢 货场', tlText((pf.jobSrcCompany || '?') + ' → ' + (pf.jobDstCompany || '?'))));
+      }
+      var plannedKm = tlNum(pf.jobPlannedKm) ? pf.jobPlannedKm
+        : (tlNum(pf.jobPlannedDistance) ? pf.jobPlannedDistance / 1000 : null);
+      var deliveredKm = tlNum(pf.jobDeliveredKm) ? pf.jobDeliveredKm
+        : (tlNum(pf.jobDeliveredDistance) ? pf.jobDeliveredDistance / 1000 : null);
+      if (tlNum(plannedKm) && plannedKm > 0) {
+        g5.push(tlCell('🛣️ 计划里程', plannedKm.toFixed(1) + ' km'));
+      }
+      if (tlNum(deliveredKm)) {
+        g5.push(tlCell('✅ 已行驶里程', deliveredKm.toFixed(1) + ' km'));
+      }
+      // 任务进度单独占一行（进度条需要完整宽度才看得准）
+      var progress = (tlNum(plannedKm) && plannedKm > 0 && tlNum(deliveredKm))
+        ? tlBar('📊 任务进度', Math.min(100, deliveredKm / plannedKm * 100),
+          deliveredKm.toFixed(0) + ' / ' + plannedKm.toFixed(0) + ' km', 'progress')
+        : '';
+      var g6 = [];
+      var deliveredLeft = tlHas(pf.jobDeliveryTimeStr) ? tlText(pf.jobDeliveryTimeStr)
+        : tlMinutes(pf.jobDeliveryTimeRemain);
+      if (tlHas(deliveredLeft)) {
+        g6.push(tlCell('⏳ 交付剩余', deliveredLeft,
+          tlNum(pf.jobDeliveryTimeRemain) && pf.jobDeliveryTimeRemain < 0 ? 'red' : ''));
+      }
+      if (tlNum(pf.jobCargoMassKg)) {
+        g6.push(tlCell('⚖️ 货物总质量', Math.round(pf.jobCargoMassKg).toLocaleString('en-US') + ' kg'));
+      }
+      if (tlNum(pf.jobCargoUnitCount)) {
+        g6.push(tlCell('🔢 货物件数', pf.jobCargoUnitCount + ' 件'));
+      }
+      if (tlNum(pf.jobCargoUnitMassKg)) {
+        g6.push(tlCell('⚖️ 单件质量', tlFixed(pf.jobCargoUnitMassKg, 1) + ' kg'));
+      }
+      if (tlHas(pf.isSpecialJob)) {
+        g6.push(tlCell('⭐ 特殊/易碎任务', pf.isSpecialJob ? '是' : '否'));
+      }
+      if (tlHas(pf.cargoLoaded)) {
+        g6.push(tlCell('📥 货物已装载', pf.cargoLoaded ? '是' : '否'));
+      }
+      html += tlGroup('📦 当前任务', tlGrid(g5, 2) + tlGrid([progress], 1) + tlGrid(g6, 2));
+
+      /* ---------- ⑦ 告警灯 ---------- */
+      var warns = '';
+      for (var i = 0; i < TL_WARNINGS.length; i++) {
+        if (pf[TL_WARNINGS[i][0]] === true) {
+          warns += '<span class="tl-warn-tag' + (TL_WARNINGS[i][2] ? ' urgent' : '') + '">⚠️ ' + TL_WARNINGS[i][1] + '</span>';
+        }
+      }
+      if (warns) html += tlGroup('🚨 车辆告警', '<div class="tl-warn-tags">' + warns + '</div>');
+
+      /* ---------- ⑧ 城市与货场 ID（SCS 内部名） ---------- */
+      var g7 = [];
+      g7.push(tlCell('🏙️ 起运城市ID', tlHas(pf.jobSrcCityId) ? tlText(pf.jobSrcCityId) : null, 'dim', true));
+      g7.push(tlCell('🏙️ 目的城市ID', tlHas(pf.jobDstCityId) ? tlText(pf.jobDstCityId) : null, 'dim', true));
+      g7.push(tlCell('🏢 起运货场ID', tlHas(pf.jobSrcCompanyId) ? tlText(pf.jobSrcCompanyId) : null, 'dim', true));
+      g7.push(tlCell('🏢 目的货场ID', tlHas(pf.jobDstCompanyId) ? tlText(pf.jobDstCompanyId) : null, 'dim', true));
+      html += tlGroup('🏷️ 城市与货场ID', tlGrid(g7, 2));
+
+      return html;
+    }
+
     function init(data) {
       // Header
       if (data.showAvatar) {
@@ -630,7 +1281,12 @@
       document.getElementById('tmp-name').innerText = data.name;
       document.getElementById('tmp-id').innerText = 'TMP#' + data.tmpId;
       document.getElementById('group-badge').innerText = data.groupName;
-      document.getElementById('group-badge').style.backgroundColor = '#' + data.groupColor;
+      const groupBadge = document.getElementById('group-badge');
+      groupBadge.style.backgroundColor = '#' + data.groupColor;
+      // 用分组色带一圈同色辉光，让徽章和整体玻璃质感统一
+      if (data.groupColor) {
+        groupBadge.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.28), 0 4px 14px -6px #' + data.groupColor;
+      }
 
       // Online dot & status badge
       const dot = document.getElementById('online-dot');
@@ -677,13 +1333,13 @@
       // Online Status Section
       const statusEl = document.getElementById('tmp-online-status');
       if (data.isOnline) {
-        statusEl.innerHTML = '<span style="color:#4ade80;">在线 🟢</span> <span style="color:#94a3b8;font-size:12px;">(' + data.onlineServerName + ')</span>';
+        statusEl.innerHTML = '<span style="color:#7ee7a5;">在线 🟢</span> <span style="color:#8b9cb8;font-size:12px;">(' + data.onlineServerName + ')</span>';
         if (data.onlineCountry && data.onlineCity) {
           document.getElementById('online-location-row').style.display = '';
           document.getElementById('tmp-online-location').innerText = data.onlineCountry + ' - ' + data.onlineCity;
         }
       } else {
-        statusEl.innerHTML = '<span style="color:#9ca3af;">离线 ⚫</span>';
+        statusEl.innerHTML = '<span style="color:#8b9cb8;">离线 ⚫</span>';
       }
 
       // Last Online
@@ -699,6 +1355,16 @@
           document.getElementById('map-title').innerText = '🗺️ ' + data.onlineCountry + ' - ' + data.onlineCity;
         }
         map(data.onlineMapType, data.onlineX, data.onlineY);
+      }
+
+      // Telemetry（玩家在线 + 本队成员 + 数据未过期时后端才会下发，这里再兜一层在线判断）
+      if (data.isOnline && data.telemetry && data.telemetry.player) {
+        var tlHtml = buildTelemetry(data.telemetry);
+        // 记录存在但所有字段都为空时不显示空壳板块
+        if (tlHtml) {
+          document.getElementById('telemetry-section').style.display = '';
+          document.getElementById('telemetry-body').innerHTML = tlHtml;
+        }
       }
 
       // Ban Section
