@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActivityService = void 0;
 
 const koishi_1 = require("koishi");
+const { LeadRoleCallMessage, LeadRoleCallTime } = require("../util/constant");
 
 const v1Methods = require('./tmpActivityService/tmpActivityServiceV1');
 
@@ -13,6 +14,7 @@ class ActivityService {
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders = new Set();
+        this.sentRoleCalls = new Set();
         this.sentNoActivityNotification = false;
         this.timers = [];
         this.logger = this.initLogger();
@@ -79,6 +81,21 @@ class ActivityService {
                 this.resetDailyData();
                 return "✅ 今日活动数据已重置完成！";
             });
+
+        // 仅配置了联运部群号时才注册，方便立即验证效果（定时任务每天 15:00 才触发一次）
+        if (this.cfg.leadGroups && this.cfg.leadGroups.length > 0) {
+            this.ctx.command("联运接龙", "手动发布今日活动的联运接龙")
+                .action(async () => {
+                    this.logger.debug("手动执行联运接龙命令");
+                    const sent = await this.checkAndSendLeadRoleCall();
+                    if (sent.length === 0) {
+                        return this.todayActivities.length === 0
+                            ? "今日没有活动，无需发布接龙"
+                            : "今日接龙已发布过了（需要重发请先执行「重置数据」）";
+                    }
+                    return `✅ 已发布接龙：${sent.join('、')}`;
+                });
+        }
     }
 
     setupDailyTasks() {
@@ -145,6 +162,19 @@ class ActivityService {
             }, `在线成员检查定时器: ${this.cfg.onlineCheck.time}`);
         }
 
+        // 联运部接龙：配置了联运群号后，每天定时检查当天活动并发布接龙
+        const leadGroups = this.cfg.leadGroups || [];
+        if (leadGroups.length > 0) {
+            const leadTimeText = `${LeadRoleCallTime.hour}:${LeadRoleCallTime.minute.toString().padStart(2, "0")}`;
+            this.setupTimer(LeadRoleCallTime.hour, LeadRoleCallTime.minute, async () => {
+                this.logger.timing(`执行联运接龙任务 (${leadTimeText})`);
+                await this.checkAndSendLeadRoleCall();
+            }, `联运接龙定时器: ${leadTimeText}`);
+            this.logger.info(`[联运接龙] 已启用，${leadGroups.length} 个联运群，每天 ${leadTimeText} 检查当天活动并发布接龙`);
+        } else {
+            this.logger.debug("未配置联运部群号，跳过联运接龙定时器");
+        }
+
         const minuteTimer = setInterval(async () => {
             await this.checkAndSendActivityReminders();
         }, koishi_1.Time.minute);
@@ -191,17 +221,19 @@ class ActivityService {
         const previousActivityCount = this.todayActivities.length;
         const previousTMPCount = this.todayTMPEvents.length;
         const previousReminderCount = this.sentReminders.size;
+        const previousRoleCallCount = this.sentRoleCalls.size;
         const previousNoActivityNotification = this.sentNoActivityNotification;
 
         this.logger.info(`[数据重置] 开始重置数据，本地时间: ${localTime}, 本地日期: ${localDate}, UTC日期: ${utcDate}`);
-        this.logger.info(`[数据重置] 重置前数据: 活动${previousActivityCount}个, TMP${previousTMPCount}个, 提醒${previousReminderCount}个, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}`);
+        this.logger.info(`[数据重置] 重置前数据: 活动${previousActivityCount}个, TMP${previousTMPCount}个, 提醒${previousReminderCount}个, 联运接龙${previousRoleCallCount}个, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}`);
 
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders.clear();
+        this.sentRoleCalls.clear();
         this.sentNoActivityNotification = false;
 
-        this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}→未发送`);
+        this.logger.info(`[数据重置] 每日数据已重置: 活动${previousActivityCount}→0, TMP${previousTMPCount}→0, 提醒${previousReminderCount}→0, 联运接龙${previousRoleCallCount}→0, 无活动通知${previousNoActivityNotification ? "已发送" : "未发送"}→未发送`);
 
         this.updateActivityData().then(() => {
             this.logger.info(`[数据重置] 重置后数据更新完成: 活动${this.todayActivities.length}个, TMP${this.todayTMPEvents.length}个`);
@@ -605,6 +637,76 @@ class ActivityService {
         throw lastError || new Error(`所有onebot适配器都无法发送消息到${groupType} ${groupId}`);
     }
 
+    /**
+     * 联运部接龙：当天有活动时，在联运群发布接龙消息。
+     * 返回本次实际发布的活动名称数组（未配置群号 / 今日无活动 / 今日已发布时为空数组）。
+     */
+    async checkAndSendLeadRoleCall() {
+        const groups = this.cfg.leadGroups || [];
+        if (groups.length === 0) {
+            this.logger.debug("[联运接龙] 未配置联运部群号，跳过");
+            return [];
+        }
+
+        // 先刷新活动数据，避免依赖上一次定时检查（默认 14:00）的结果
+        await this.updateActivityData();
+
+        if (this.todayActivities.length === 0) {
+            this.logger.debug("[联运接龙] 今日没有活动，跳过");
+            return [];
+        }
+
+        const template = this.cfg.leadCallMessage || LeadRoleCallMessage;
+        const now = new Date();
+        const dateText = `${now.getMonth() + 1}月${now.getDate()}日`;
+        const sent = [];
+
+        for (const activity of this.todayActivities) {
+            const name = activity.themeName || '未知活动';
+            const key = `rolecall_${activity.id}`;
+            if (this.sentRoleCalls.has(key)) {
+                this.logger.debug(`[联运接龙] "${name}" 今日已发布过，跳过`);
+                continue;
+            }
+
+            const text = template
+                .replace(/\{date\}/g, dateText)
+                .replace(/\{name\}/g, name)
+                .replace(/\\n/g, "\n")
+                .trim();
+
+            // 模板以「@全体成员」开头时替换成真实的全体 @（onebot 适配器会转成 [CQ:at,qq=all]）；
+            // 纯文本的 "@全体成员" 在 QQ 里只是一串字，不会触发全员提醒。
+            // 想退回纯文本：把模板开头的「@全体成员」删掉即可。
+            const AT_ALL_PREFIX = '@全体成员';
+            const payload = text.startsWith(AT_ALL_PREFIX)
+                ? [koishi_1.h('at', { type: 'all' }), text.slice(AT_ALL_PREFIX.length)]
+                : text;
+
+            let anySuccess = false;
+            for (const groupId of groups) {
+                try {
+                    await this.sendToGroup(groupId, payload, "联运群");
+                    this.logger.message(`[联运接龙] 已发布到联运群 ${groupId}: ${name}`);
+                    anySuccess = true;
+                } catch (error) {
+                    this.logger.error(`[联运接龙] 发布到联运群 ${groupId} 失败:`, error.message);
+                }
+            }
+
+            // 发送全部失败时不记「已发布」，留待下次触发（手动命令 / 重置数据后）重试
+            if (anySuccess) {
+                this.sentRoleCalls.add(key);
+                sent.push(name);
+            }
+        }
+
+        if (sent.length > 0) {
+            this.logger.info(`[联运接龙] 本次发布完成：${sent.join('、')}`);
+        }
+        return sent;
+    }
+
     async checkAutoClockStatus() {
         await this.updateActivityData();
 
@@ -649,6 +751,7 @@ class ActivityService {
         this.todayActivities = [];
         this.todayTMPEvents = [];
         this.sentReminders.clear();
+        this.sentRoleCalls.clear();
         this.timers.forEach((timer) => {
             clearTimeout(timer);
             clearInterval(timer);

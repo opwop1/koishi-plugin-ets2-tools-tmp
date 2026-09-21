@@ -7,6 +7,7 @@ const koishi_1 = require("koishi");
 const model = require('./database/model');
 const { ServerType } = require('./util/constant');
 const { MileageRankingType } = require('./util/constant');
+const { LeadRoleCallMessage, LeadRoleCallTime } = require('./util/constant');
 
 const commands = {
     tmpQuery: require('./command/tmpQuery/tmpQuery'),
@@ -194,6 +195,8 @@ exports.Config = koishi_1.Schema.intersect([
                 activityStartReminderMessage: koishi_1.Schema.string().description("活动开始提醒消息模板，支持变量：{name}, {server}, {startingPoint}, {terminalPoint}, {distance}, {banner}").default("活动 {name} 现在开始集合啦!\n服务器: {server}\n起点: {startingPoint}\n终点: {terminalPoint}\n距离: {distance}KM\n活动将于20:30分开始！"),
                 activityReminderTimes: koishi_1.Schema.array(koishi_1.Schema.number()).role("table").description("活动开始前提醒时间（分钟）").default([60, 30, 15])
             }).description("主群配置"),
+            leadGroups: koishi_1.Schema.array(koishi_1.Schema.string()).role("table").description("联运部群号（填写后，当天有活动时会在该群 " + LeadRoleCallTime.hour + ":00 自动发布接龙）").default([]),
+            leadCallMessage: koishi_1.Schema.string().description("联运接龙消息模板，支持变量：{date} 日期、{name} 活动名称").default(LeadRoleCallMessage),
             debug: koishi_1.Schema.object({
                 debugMode: koishi_1.Schema.boolean().description("启用调试模式").default(false),
                 logApiResponses: koishi_1.Schema.boolean().description("记录API响应详情").default(false),
