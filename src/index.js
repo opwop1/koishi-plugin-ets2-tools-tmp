@@ -5,6 +5,7 @@ exports.apply = apply;
 
 const koishi_1 = require("koishi");
 const model = require('./database/model');
+const guildBind = require('./database/guildBind');
 const { ServerType } = require('./util/constant');
 const { MileageRankingType } = require('./util/constant');
 const { LeadRoleCallMessage, LeadRoleCallTime } = require('./util/constant');
