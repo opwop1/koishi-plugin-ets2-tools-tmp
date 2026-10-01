@@ -2,9 +2,10 @@ const { segment } = require('koishi')
 const dayjs = require('dayjs')
 const { resolve } = require('path')
 const common = require('../util/common')
-const { PromodsIds, ServerType } = require('../util/constant')
+const { PromodsIds, AtsIds, AtsFootprintStartDate, ServerType } = require('../util/constant')
 const evmOpenApi = require('../api/evmOpenApi')
 const guildBind = require('../database/guildBind')
+const tmpIdPicker = require('../util/tmpIdPicker')
 
 // 足迹统计数据的开始收集日期（仅用于近一年足迹图片中的提示展示）
 const FOOTPRINT_DATA_START_DATE = '2026-08-19'
@@ -81,13 +82,25 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
     return `请输入正确的玩家编号，或绑定玩家编号`
   }
 
-  // 如果没有传入tmpId，尝试从数据库查询绑定信息
+  // 如果没有传入tmpId，尝试从绑定记录获取（多绑定时会列出序号供选择，支持多选=发多张足迹图）
   if (!tmpId) {
-    let guildBindData = await guildBind.get(ctx.database, session.platform, session.userId)
-    if (!guildBindData) {
+    const bindings = await guildBind.list(ctx.database, session.platform, session.userId)
+    if (bindings.length === 0) {
       return `请输入正确的玩家编号，或绑定玩家编号`
     }
-    tmpId = guildBindData.tmp_id
+    const picked = await tmpIdPicker.pick(ctx, session, bindings)
+    if (picked === null) {
+      return // 已列出序号等待用户回复
+    }
+    if (picked.length > 1) {
+      const results = []
+      for (const id of picked) {
+        const r = await module.exports(ctx, session, serverType, id, date)
+        if (r != null) results.push(r)
+      }
+      return results.length === 1 ? results[0] : results
+    }
+    tmpId = picked[0]
   }
 
   // 查询玩家信息
@@ -131,16 +144,23 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
     return '日期传递错误';
   }
 
-  let mapPlayerHistory = await evmOpenApi.mapPlayerHistory(ctx.http, tmpId, null, startTime, endTime)
+  // 是否为美卡足迹（决定历史接口的 game 参数与过滤规则）
+  const isAts = ServerType.ats === serverType
+  // 查询美卡历史需要显式传 game=2（不传默认欧卡，欧卡/Promods 维持原样）
+  let mapPlayerHistory = await evmOpenApi.mapPlayerHistory(ctx.http, tmpId, null, startTime, endTime, isAts ? 2 : undefined)
   if (mapPlayerHistory.error) {
     return '查询玩家历史位置数据失败，请稍后重试'
   }
 
   // 过滤非对应服务器数据（单次遍历统计轨迹范围与有效点数，避免百万级数据产生额外数组拷贝）
   const promodsIdSet = new Set(PromodsIds)
+  const atsIdSet = new Set(AtsIds)
   const isTargetServer = item => {
-    if (ServerType.ets === serverType) {
-      return !promodsIdSet.has(item.serverId)
+    if (isAts) {
+      return atsIdSet.has(item.serverId)
+    } else if (ServerType.ets === serverType) {
+      // 欧卡：排除 Promods 与美卡的服务器
+      return !promodsIdSet.has(item.serverId) && !atsIdSet.has(item.serverId)
     } else if (ServerType.promods === serverType) {
       return promodsIdSet.has(item.serverId)
     }
@@ -191,16 +211,19 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
 
   // 拼接数据（今日足迹展示今日里程；其余展示该区间里程（distance 累加）与玩家总里程）
   const isToday = date === 'today'
+  const rangeTextMap = { today: '今日', yesterday: '昨日', sevenday: '近七日', month: '近一个月', year: '近一年' }[date] || ''
   let data = {
-    mapType: ServerType.promods === serverType ? 'promods' : 'ets',
+    mapType: isAts ? 'ats' : (ServerType.promods === serverType ? 'promods' : 'ets'),
     name: playerInfo.data.name,
     smallAvatarUrl: playerInfo.data.smallAvatarUrl,
-    rangeText: { today: '今日', yesterday: '昨日', sevenday: '近七日', month: '近一个月', year: '近一年' }[date] || '',
+    rangeText: isAts ? `${rangeTextMap}（美卡）` : rangeTextMap,
     isToday,
     mileageLabel: isToday ? '今日里程' : '该区间里程',
     mileage: isToday ? playerInfo.data.todayMileage : intervalDistance,
     totalMileage: isToday ? null : playerInfo.data.mileage,
-    dataStartDate: date === 'year' ? FOOTPRINT_DATA_START_DATE : null,
+    etsMileage: isToday ? null : playerInfo.data.mileageEts2,
+    atsMileage: isToday ? null : playerInfo.data.mileageAts,
+    dataStartDate: date === 'year' ? (isAts ? AtsFootprintStartDate : FOOTPRINT_DATA_START_DATE) : null,
     segments
   }
 

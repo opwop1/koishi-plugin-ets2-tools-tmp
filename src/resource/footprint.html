@@ -98,8 +98,8 @@
       z-index: 1001;
       display: flex;
       align-items: center;
-      gap: 18px;
-      padding: 11px 20px;
+      gap: 12px;
+      padding: 10px 16px;
       border-radius: 14px;
       box-sizing: border-box;
     }
@@ -107,16 +107,17 @@
       display: flex;
       flex-direction: column;
       gap: 2px;
-      min-width: 110px;
     }
     .mileage-block .label {
-      font-size: 11px;
-      letter-spacing: 2px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
       color: #8fa3c8;
+      white-space: nowrap;
     }
     .mileage-block .value {
-      font-size: 21px;
+      font-size: 18px;
       font-weight: 800;
+      white-space: nowrap;
       background: linear-gradient(90deg, #4ade80, #a3e635);
       -webkit-background-clip: text;
       background-clip: text;
@@ -136,14 +137,15 @@
     .legend {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
     }
     .legend .item {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
+      gap: 5px;
+      font-size: 10.5px;
       color: #9fb3d9;
+      white-space: nowrap;
     }
     .legend .line-sample {
       width: 20px;
@@ -165,13 +167,15 @@
     /* 数据说明（近一年足迹时显示统计开始日期） */
     .note {
       margin-left: auto;
-      font-size: 11px;
+      font-size: 10.5px;
       color: #fcd34d;
       background: rgba(251, 191, 36, .1);
       border: 1px solid rgba(251, 191, 36, .32);
-      padding: 5px 12px;
+      padding: 4px 10px;
       border-radius: 8px;
       letter-spacing: .5px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .hidden { display: none; }
   </style>
@@ -200,6 +204,11 @@
       <div class="mileage-block" id="total-mileage-block">
         <span class="label">总里程</span>
         <span class="value" id="total-distance">0.0 km</span>
+      </div>
+      <div class="v-divider" id="game-mileage-divider"></div>
+      <div class="mileage-block" id="game-mileage-block">
+        <span class="label" id="game-mileage-label">欧卡总里程</span>
+        <span class="value" id="game-mileage-distance">0.0 km</span>
       </div>
       <div class="v-divider"></div>
       <div class="legend">
@@ -233,10 +242,24 @@
         document.getElementById('distance').classList.add('cyan');
         const totalKm = Number(((data.totalMileage || 0) / 1000).toFixed(1)).toLocaleString('zh-CN');
         document.getElementById('total-distance').innerText = `${totalKm} km`;
+        // 本游戏总里程：美卡足迹显示美卡总里程，欧卡/Promods 足迹显示欧卡总里程
+        const gameBlock = document.getElementById('game-mileage-block');
+        const gameDivider = document.getElementById('game-mileage-divider');
+        const gameValue = data.mapType === 'ats' ? data.atsMileage : data.etsMileage;
+        if (gameValue != null) {
+          document.getElementById('game-mileage-label').innerText = data.mapType === 'ats' ? '美卡总里程' : '欧卡总里程';
+          const gameKm = Number((gameValue / 1000).toFixed(1)).toLocaleString('zh-CN');
+          document.getElementById('game-mileage-distance').innerText = `${gameKm} km`;
+        } else {
+          gameBlock.classList.add('hidden');
+          gameDivider.classList.add('hidden');
+        }
       } else {
         // 今日足迹不显示总里程块
         document.getElementById('total-mileage-block').classList.add('hidden');
         document.getElementById('total-divider').classList.add('hidden');
+        document.getElementById('game-mileage-block').classList.add('hidden');
+        document.getElementById('game-mileage-divider').classList.add('hidden');
       }
 
       // 近一年足迹显示统计开始日期

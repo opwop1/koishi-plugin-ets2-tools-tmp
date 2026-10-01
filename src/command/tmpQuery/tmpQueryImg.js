@@ -2,6 +2,7 @@ const dayjs = require('dayjs');
 const dayjsRelativeTime = require('dayjs/plugin/relativeTime');
 const dayjsLocaleZhCn = require('dayjs/locale/zh-cn');
 const guildBind = require('../../database/guildBind');
+const tmpIdPicker = require('../../util/tmpIdPicker');
 const truckyAppApi = require('../../api/truckyAppApi');
 const evmOpenApi = require('../../api/evmOpenApi');
 const baiduTranslate = require('../../util/baiduTranslate');
@@ -80,13 +81,25 @@ module.exports = async (ctx, cfg, session, tmpId) => {
         }
         tmpId = guildBindData.tmp_id;
     }
-    // 如果没有传入tmpId，尝试从数据库查询绑定信息
+    // 如果没有传入tmpId，尝试从绑定记录获取（多绑定时会列出序号供选择，支持多选）
     if (!tmpId) {
-        let guildBindData = await guildBind.get(ctx.database, session.platform, session.userId);
-        if (!guildBindData) {
+        const bindings = await guildBind.list(ctx.database, session.platform, session.userId);
+        if (bindings.length === 0) {
             return `请输入正确的玩家编号`;
         }
-        tmpId = guildBindData.tmp_id;
+        const picked = await tmpIdPicker.pick(ctx, session, bindings);
+        if (picked === null) {
+            return; // 已列出序号等待用户回复
+        }
+        if (picked.length > 1) {
+            const results = [];
+            for (const id of picked) {
+                const r = await module.exports(ctx, cfg, session, id);
+                if (r != null) results.push(r);
+            }
+            return results.length === 1 ? results[0] : results;
+        }
+        tmpId = picked[0];
     }
     // 并行请求玩家信息与线上状态（互不依赖，避免串行等待）
     const [playerInfo, playerMapInfo] = await Promise.all([
@@ -176,8 +189,13 @@ module.exports = async (ctx, cfg, session, tmpId) => {
     data.sponsorAmount = playerInfo.data.sponsorAmount;
     data.sponsorCumulativeAmount = playerInfo.data.sponsorCumulativeAmount;
     data.sponsorHide = playerInfo.data.sponsorHide;
+    // 里程：mileage/todayMileage 为欧卡+美卡合计，另附两款游戏的单独里程
     data.mileage = playerInfo.data.mileage;
     data.todayMileage = playerInfo.data.todayMileage;
+    data.mileageEts2 = playerInfo.data.mileageEts2;
+    data.mileageAts = playerInfo.data.mileageAts;
+    data.todayMileageEts2 = playerInfo.data.todayMileageEts2;
+    data.todayMileageAts = playerInfo.data.todayMileageAts;
     data.isOnline = false;
     data.onlineStatus = '离线';
     if (playerMapInfo && !playerMapInfo.error) {

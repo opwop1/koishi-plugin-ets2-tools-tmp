@@ -505,6 +505,47 @@
       --acc-tint: rgba(52, 211, 153, 0.06);
     }
 
+    /* 里程明细（欧卡/美卡）：一行两个小格，与遥测网格同一套视觉 */
+    .mini-grid {
+      display: grid;
+      gap: 6px 8px;
+      margin-top: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mini-grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mini-cell {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 26px;
+      padding: 4px 9px;
+      border-radius: var(--r-sm);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .mini-k {
+      font-size: 11px;
+      color: var(--t2);
+      white-space: nowrap;
+    }
+
+    .mini-v {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--t1);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
     /* ===== GLASS BAR ===== */
     .glass-bar {
       margin: 11px 14px;
@@ -922,12 +963,32 @@
     <div class="section mileage-section" id="mileage-section" style="display:none;">
       <div class="section-title">🚩 里程信息</div>
       <div class="info-row" id="mileage-row" style="display:none;">
-        <div class="info-label">🚩 历史里程</div>
+        <div class="info-label">🚩 总里程</div>
         <div class="info-value" id="tmp-mileage"></div>
+      </div>
+      <div class="mini-grid cols-2" id="mileage-detail" style="display:none;">
+        <div class="mini-cell">
+          <span class="mini-k">欧卡</span>
+          <span class="mini-v" id="tmp-mileage-ets2"></span>
+        </div>
+        <div class="mini-cell">
+          <span class="mini-k">美卡</span>
+          <span class="mini-v" id="tmp-mileage-ats"></span>
+        </div>
       </div>
       <div class="info-row" id="today-mileage-row" style="display:none;">
         <div class="info-label">🚩 今日里程</div>
         <div class="info-value" id="tmp-today-mileage"></div>
+      </div>
+      <div class="mini-grid cols-2" id="today-mileage-detail" style="display:none;">
+        <div class="mini-cell">
+          <span class="mini-k">欧卡</span>
+          <span class="mini-v" id="tmp-today-mileage-ets2"></span>
+        </div>
+        <div class="mini-cell">
+          <span class="mini-k">美卡</span>
+          <span class="mini-v" id="tmp-today-mileage-ats"></span>
+        </div>
       </div>
     </div>
 
@@ -990,8 +1051,22 @@
 
     function formatMileage(val) {
       if (!val) return null;
-      if (val > 1000) return (val / 1000).toFixed(1) + ' 公里';
+      if (val > 1000) return Number((val / 1000).toFixed(1)).toLocaleString('en-US') + ' 公里';
       return val + ' 米';
+    }
+
+    // 单款游戏的里程：0 也照常显示成「0 公里」（表示这款没跑过），只有 null/空 才不显示
+    function formatMileageZero(val) {
+      if (val === null || val === undefined || val === '') return null;
+      var n = Number(val);
+      if (!isFinite(n)) return null;
+      if (n <= 0) return '0 公里';
+      return n >= 1000 ? Number((n / 1000).toFixed(1)).toLocaleString('en-US') + ' 公里' : n + ' 米';
+    }
+
+    // 两款游戏里程是否值得单独列出（都为 0 就不占地方）
+    function hasMileageDetail(ets2, ats) {
+      return Number(ets2) > 0 || Number(ats) > 0;
     }
 
     /* ==================================================================
@@ -1388,18 +1463,30 @@
       banCountEl.innerText = banCount + '次';
       banCountEl.className = banCount > 0 ? 'info-value has-bans' : 'info-value no-bans';
 
-      // Mileage
+      // Mileage：总里程 / 今日里程是欧卡+美卡合计，另附两款游戏的单独里程
       const mileage = formatMileage(data.mileage);
       const todayMileage = formatMileage(data.todayMileage);
-      if (mileage || todayMileage) {
+      const hasMileageBreakdown = hasMileageDetail(data.mileageEts2, data.mileageAts);
+      const hasTodayBreakdown = hasMileageDetail(data.todayMileageEts2, data.todayMileageAts);
+      if (mileage || todayMileage || hasMileageBreakdown || hasTodayBreakdown) {
         document.getElementById('mileage-section').style.display = '';
         if (mileage) {
           document.getElementById('mileage-row').style.display = '';
           document.getElementById('tmp-mileage').innerText = mileage;
         }
+        if (hasMileageBreakdown) {
+          document.getElementById('mileage-detail').style.display = '';
+          document.getElementById('tmp-mileage-ets2').innerText = formatMileageZero(data.mileageEts2) || '';
+          document.getElementById('tmp-mileage-ats').innerText = formatMileageZero(data.mileageAts) || '';
+        }
         if (todayMileage) {
           document.getElementById('today-mileage-row').style.display = '';
           document.getElementById('tmp-today-mileage').innerText = todayMileage;
+        }
+        if (hasTodayBreakdown) {
+          document.getElementById('today-mileage-detail').style.display = '';
+          document.getElementById('tmp-today-mileage-ets2').innerText = formatMileageZero(data.todayMileageEts2) || '';
+          document.getElementById('tmp-today-mileage-ats').innerText = formatMileageZero(data.todayMileageAts) || '';
         }
       }
 

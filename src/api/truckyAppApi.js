@@ -27,11 +27,13 @@ module.exports = {
   },
   /**
    * 查询热门交通数据
+   * @param game 'ets2' 欧卡 / 'ats' 美卡
    */
-  async trafficTop (http, serverName) {
+  async trafficTop (http, serverName, game) {
+    const gameCode = game || 'ets2'
     let result = null
     try {
-      result = await apiLog.get(http, 'trucky.trafficTop', `${BASE_API}/v2/traffic/top?game=ets2&server=${serverName}`)
+      result = await apiLog.get(http, 'trucky.trafficTop', `${BASE_API}/v2/traffic/top?game=${gameCode}&server=${serverName}`)
     } catch {
       return {
         error: true

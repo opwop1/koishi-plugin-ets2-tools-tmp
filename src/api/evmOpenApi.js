@@ -21,40 +21,16 @@ async function requestWithFallback(http, path) {
 module.exports = {
     /**
      * 查询服务器列表
+     * game: 'ETS2' 欧卡 / 'ATS' 美卡（接口 game 参数 1=欧卡 / 2=美卡，不传默认欧卡）
      */
     async serverList(http, game) {
+        const gameCode = game === 'ATS' ? 2 : 1
         let result = null
         try {
-            result = game === 'ATS'
-                ? await apiLog.get(http, 'evm.proxy.truckersmp.servers', `${BASE_APIS[0]}/proxy/truckersmp/servers`)
-                : await requestWithFallback(http, `/server/list`)
+            result = await requestWithFallback(http, `/server/list?game=${gameCode}`)
         } catch {
             return {
                 error: true
-            }
-        }
-
-        if (game === 'ATS') {
-            const servers = result?.response
-            const isError = result?.error === true || !Array.isArray(servers)
-            return {
-                error: isError,
-                ...(isError ? {} : {
-                    data: servers
-                        .filter(server => server.game === 'ATS')
-                        .map(server => ({
-                            serverName: server.name,
-                            isOnline: server.online ? 1 : 0,
-                            playerCount: server.players,
-                            maxPlayer: server.maxplayers,
-                            queueCount: server.queue || 0,
-                            afkEnable: server.afkenabled ? 1 : 0,
-                            collisionsEnable: server.collisions ? 1 : 0,
-                            policeCarEnable: server.policecarsforplayers ? 1 : 0,
-                            speedLimiterEnable: server.speedlimiter > 0 ? 1 : 0,
-                            playerHistory: []
-                        }))
-                })
             }
         }
 
@@ -181,11 +157,13 @@ module.exports = {
     },
     /**
      * 查询玩家历史数据
+     * @param game 可选，2=美卡（接口不传默认欧卡）
      */
-    async mapPlayerHistory(http, tmpId, serverId, startTime, endTime) {
+    async mapPlayerHistory(http, tmpId, serverId, startTime, endTime, game) {
         let result = null
         try {
-            result = await requestWithFallback(http, `/map/playerHistory?tmpId=${tmpId || ''}&serverId=${serverId || ''}&startTime=${startTime || ''}&endTime=${endTime || ''}`)
+            const gameParam = game ? `&game=${game}` : ''
+            result = await requestWithFallback(http, `/map/playerHistory?tmpId=${tmpId || ''}&serverId=${serverId || ''}&startTime=${startTime || ''}&endTime=${endTime || ''}${gameParam}`)
         } catch {
             return {
                 error: true

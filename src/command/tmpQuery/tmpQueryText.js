@@ -2,11 +2,38 @@ const dayjs = require('dayjs');
 const dayjsRelativeTime = require('dayjs/plugin/relativeTime');
 const dayjsLocaleZhCn = require('dayjs/locale/zh-cn');
 const guildBind = require('../../database/guildBind');
+const tmpIdPicker = require('../../util/tmpIdPicker');
 const truckyAppApi = require('../../api/truckyAppApi');
 const evmOpenApi = require('../../api/evmOpenApi');
 const baiduTranslate = require('../../util/baiduTranslate');
 dayjs.extend(dayjsRelativeTime);
 dayjs.locale(dayjsLocaleZhCn);
+
+/**
+ * 里程文本：>=1000 米换算成公里；0 显示成「0公里」（表示这款游戏没跑过）
+ */
+function formatMileageText(value) {
+    const n = Number(value) || 0;
+    if (n <= 0) {
+        return '0公里';
+    }
+    if (n >= 1000) {
+        return Number((n / 1000).toFixed(1)).toLocaleString('en-US') + '公里';
+    }
+    return n + '米';
+}
+
+/**
+ * 欧卡/美卡里程明细文本（两者都为 0 时返回空串）
+ */
+function formatMileageDetail(ets2, ats) {
+    const ets2Val = Number(ets2) || 0;
+    const atsVal = Number(ats) || 0;
+    if (ets2Val <= 0 && atsVal <= 0) {
+        return '';
+    }
+    return ` (欧卡 ${formatMileageText(ets2Val)} / 美卡 ${formatMileageText(atsVal)})`;
+}
 /**
  * 用户组
  */
@@ -43,13 +70,25 @@ module.exports = async (ctx, cfg, session, tmpId) => {
         }
         tmpId = guildBindData.tmp_id;
     }
-    // 如果没有传入tmpId，尝试从数据库查询绑定信息
+    // 如果没有传入tmpId，尝试从绑定记录获取（多绑定时会列出序号供选择，支持多选）
     if (!tmpId) {
-        let guildBindData = await guildBind.get(ctx.database, session.platform, session.userId);
-        if (!guildBindData) {
+        const bindings = await guildBind.list(ctx.database, session.platform, session.userId);
+        if (bindings.length === 0) {
             return `请输入正确的玩家编号`;
         }
-        tmpId = guildBindData.tmp_id;
+        const picked = await tmpIdPicker.pick(ctx, session, bindings);
+        if (picked === null) {
+            return; // 已列出序号等待用户回复
+        }
+        if (picked.length > 1) {
+            const results = [];
+            for (const id of picked) {
+                const r = await module.exports(ctx, cfg, session, id);
+                if (r != null) results.push(r);
+            }
+            return results.length === 1 ? results[0] : results;
+        }
+        tmpId = picked[0];
     }
     // 并行请求玩家信息与线上状态（互不依赖，避免串行等待）
     const [playerInfo, playerMapInfo] = await Promise.all([
@@ -139,23 +178,14 @@ module.exports = async (ctx, cfg, session, tmpId) => {
         }
     }
     message += '\n🚫封禁次数: ' + (playerInfo.data.banCount || 0);
+    // 历史/今日里程为欧卡+美卡合计，后面附上两款游戏的单独里程
     if (playerInfo.data.mileage) {
-        let mileage = playerInfo.data.mileage;
-        let mileageUnit = '米';
-        if (mileage > 1000) {
-            mileage = (mileage / 1000).toFixed(1);
-            mileageUnit = '公里';
-        }
-        message += '\n\n🚩历史里程: ' + mileage + mileageUnit;
+        message += '\n\n🚩历史里程: ' + formatMileageText(playerInfo.data.mileage)
+            + formatMileageDetail(playerInfo.data.mileageEts2, playerInfo.data.mileageAts);
     }
     if (playerInfo.data.todayMileage) {
-        let todayMileage = playerInfo.data.todayMileage;
-        let mileageUnit = '米';
-        if (todayMileage > 1000) {
-            todayMileage = (todayMileage / 1000).toFixed(1);
-            mileageUnit = '公里';
-        }
-        message += '\n🚩今日里程: ' + todayMileage + mileageUnit;
+        message += '\n🚩今日里程: ' + formatMileageText(playerInfo.data.todayMileage)
+            + formatMileageDetail(playerInfo.data.todayMileageEts2, playerInfo.data.todayMileageAts);
     }
     if (playerMapInfo && !playerMapInfo.error) {
         message += '\n📶在线状态: ' + (playerMapInfo.data.online ? `在线🟢 (${playerMapInfo.data.serverDetails.name})` : '离线⚫');

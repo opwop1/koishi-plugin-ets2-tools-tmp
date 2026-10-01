@@ -3,6 +3,7 @@ const { resolve } = require('path');
 const common = require('../util/common');
 const evmOpenApi = require('../api/evmOpenApi');
 const guildBind = require('../database/guildBind');
+const tmpIdPicker = require('../util/tmpIdPicker');
 module.exports = async (ctx, cfg, session, rankingType) => {
     if (!ctx.puppeteer) {
         return '未启用 Puppeteer 功能';
@@ -19,11 +20,21 @@ module.exports = async (ctx, cfg, session, rankingType) => {
     else if (mileageRankingList.data.length === 0) {
         return '暂无数据';
     }
-    // 从排行榜中查找当前玩家的排行信息
-    let guildBindData = await guildBind.get(ctx.database, session.platform, session.userId);
+    // 从排行榜中查找当前玩家的排行信息（多绑定时先单选一个，排行榜只高亮一个人）
+    const bindings = await guildBind.list(ctx.database, session.platform, session.userId);
+    let bindTmpId = null;
+    if (bindings.length === 1) {
+        bindTmpId = String(bindings[0].tmp_id);
+    } else if (bindings.length > 1) {
+        const picked = await tmpIdPicker.pick(ctx, session, bindings, { allowMulti: false });
+        if (picked === null) {
+            return; // 已列出序号等待用户回复
+        }
+        bindTmpId = picked[0];
+    }
     let playerMileageRanking = null;
-    if (guildBindData) {
-        playerMileageRanking = mileageRankingList.data.find(p => p.tmpId == guildBindData.tmp_id) || null;
+    if (bindTmpId) {
+        playerMileageRanking = mileageRankingList.data.find(p => p.tmpId == bindTmpId) || null;
     }
     // 拼接页面数据
     let data = {

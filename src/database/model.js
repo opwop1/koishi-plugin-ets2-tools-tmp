@@ -26,6 +26,12 @@ const modelArray = {
             length: 50,
             nullable: false,
             comment: 'TMP ID'
+        },
+        tmp_name: {
+            type: 'string',
+            length: 100,
+            nullable: true,
+            comment: 'TMP玩家名称（绑定时记录，用于多绑定列表展示）'
         }
     },
     tmp_translate_cache: {
