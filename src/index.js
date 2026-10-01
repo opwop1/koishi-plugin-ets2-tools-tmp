@@ -264,7 +264,7 @@ function registerBaseCommands(ctx, cfg) {
             .action(async ({ session }, tmpId) => await commands.tmpBind(ctx, cfg, session, tmpId));
 
         ctx.command('我的绑定')
-            .usage("查看已绑定的全部TMP编号")
+            .usage("查看已绑定的全部TMP编号（★ 为默认绑定）")
             .action(async ({ session }) => {
                 const bindings = await guildBind.list(ctx.database, session.platform, session.userId);
                 if (bindings.length === 0) {
@@ -272,8 +272,35 @@ function registerBaseCommands(ctx, cfg) {
                 }
                 // 旧绑定缺名字的先补查并写回
                 await guildBind.ensureNames(ctx, bindings);
-                const lines = bindings.map((b, i) => `${i + 1}. ${b.tmp_name || '未知'} (${b.tmp_id})`);
-                return `已绑定 ${bindings.length} 个编号：\n${lines.join('\n')}${bindings.length > 1 ? '\n查询时会列出序号供选择；使用「解绑 序号」可删除' : ''}`;
+                const lines = bindings.map((b, i) => {
+                    const mark = guildBind.isDefault(b) ? '★ ' : '   ';
+                    return `${mark}${i + 1}. ${b.tmp_name || '未知'} (${b.tmp_id})`;
+                });
+                if (bindings.length === 1) {
+                    return `已绑定 ${bindings.length} 个编号：\n${lines.join('\n')}`;
+                }
+                return `已绑定 ${bindings.length} 个编号：\n${lines.join('\n')}\n★ 为默认绑定（排行榜使用）；「设为默认 序号」可切换，「解绑 序号」可删除\n查询回复序号选择，回复 all 一次性查全部（定位/足迹除外）`;
+            });
+
+        ctx.command('设为默认 <index:string>')
+            .usage("把某个绑定设为默认（序号见「我的绑定」），排行榜等指令将使用默认绑定")
+            .example("设为默认 2")
+            .action(async ({ session }, index) => {
+                if (!index || !index.trim()) {
+                    return '请输入要设为默认的序号（序号见「我的绑定」）';
+                }
+                await guildBind.ensureNames(ctx, await guildBind.list(ctx.database, session.platform, session.userId));
+                const { row, changed, total } = await guildBind.setDefaultByIndex(
+                    ctx, ctx.database, session.platform, session.userId, index.trim()
+                );
+                if (!row) {
+                    if (!total) {
+                        return '还没有绑定编号，使用「绑定 tmpId」添加';
+                    }
+                    return `序号无效，可用范围 1-${total}（序号见「我的绑定」）`;
+                }
+                const label = `${row.tmp_name || '未知'} (${row.tmp_id})`;
+                return changed ? `已将 ${label} 设为默认绑定` : `${label} 已经是默认绑定`;
             });
 
         ctx.command('解绑 <index:string>')
@@ -298,8 +325,12 @@ function registerBaseCommands(ctx, cfg) {
                     return `序号无效，可用范围 1-${bindings.length}（序号见「我的绑定」）`;
                 }
                 const row = bindings[idx - 1];
-                await guildBind.remove(ctx.database, row.id);
-                return `已解绑 ${idx}. ${row.tmp_name || '未知'} (${row.tmp_id})`;
+                const { promoted } = await guildBind.remove(ctx.database, session.platform, session.userId, row.id);
+                let msg = `已解绑 ${idx}. ${row.tmp_name || '未知'} (${row.tmp_id})`;
+                if (promoted) {
+                    msg += `\n默认绑定已自动切换到 ${promoted.tmp_name || '未知'} (${promoted.tmp_id})`;
+                }
+                return msg;
             });
     }
 
@@ -329,23 +360,23 @@ function registerBaseCommands(ctx, cfg) {
     }
 
     if (cfg.commands?.tmpMileageRanking) {
-        ctx.command('里程排行榜')
-            .usage("查询欧洲卡车模拟2里程排行榜")
-            .action(async ({ session }) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.total));
+        ctx.command('里程排行榜 [target]')
+            .usage("查询欧洲卡车模拟2里程排行榜（可 @某人 查看对方的排名）")
+            .action(async ({ session }, target) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.total, target));
 
-        ctx.command('今日里程排行榜')
-            .usage("查询欧洲卡车模拟2今日里程排行榜")
-            .action(async ({ session }) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.today));
+        ctx.command('今日里程排行榜 [target]')
+            .usage("查询欧洲卡车模拟2今日里程排行榜（可 @某人 查看对方的排名）")
+            .action(async ({ session }, target) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.today, target));
     }
 
     if (cfg.commands?.tmpVtcMileageRanking) {
-        ctx.command('vtc里程排行榜')
-            .usage("查询车队总里程排行榜")
-            .action(async ({ session }) => await commands.tmpVtcMileageRanking(ctx, cfg, session, MileageRankingType.total));
+        ctx.command('vtc里程排行榜 [target]')
+            .usage("查询车队总里程排行榜（可 @某人 查看对方的排名）")
+            .action(async ({ session }, target) => await commands.tmpVtcMileageRanking(ctx, cfg, session, MileageRankingType.total, target));
 
-        ctx.command('vtc今日里程排行榜')
-            .usage("查询车队今日里程排行榜")
-            .action(async ({ session }) => await commands.tmpVtcMileageRanking(ctx, cfg, session, MileageRankingType.today));
+        ctx.command('vtc今日里程排行榜 [target]')
+            .usage("查询车队今日里程排行榜（可 @某人 查看对方的排名）")
+            .action(async ({ session }, target) => await commands.tmpVtcMileageRanking(ctx, cfg, session, MileageRankingType.today, target));
     }
 
     if (cfg.commands?.pointRanking) {

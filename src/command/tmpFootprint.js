@@ -57,38 +57,55 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
     return '未启用 puppeteer 服务'
   }
 
-  if (tmpId && tmpId.startsWith("<at ")) {
-    if (tmpId.startsWith('<at ')) {
-      queryQQ = tmpId.replace('<at ', '');
-    }
-    let id = '';
-    const idStart = queryQQ.indexOf('id="');
-    if (idStart !== -1) {
-      const valueStart = idStart + 4;
-      const valueEnd = queryQQ.indexOf('"', valueStart);
-      if (valueEnd !== -1) {
-        id = queryQQ.substring(valueStart, valueEnd);
+  if (tmpId && typeof tmpId === 'string' && tmpId.includes('<at ')) {
+    const ats = tmpIdPicker.parseAt(tmpId);
+    let atUser = null;
+    if (Array.isArray(ats) && ats.length > 0) atUser = ats[0];
+    else if (ats && ats.failed) atUser = { id: null, name: '' };
+    if (atUser) {
+      if (!atUser.id) {
+        return `无法识别@的用户`;
       }
+      if (atUser.name) tmpIdPicker.cacheAtName(session.platform, atUser.id, atUser.name);
+      const atBindings = await guildBind.listOf(ctx.database, session.platform, atUser.id);
+      if (atBindings.length === 0) {
+        return `该用户没有绑定玩家编号`;
+      }
+      // 多个绑定时挂起提问（@别人 也走多选）；足迹不出图量大，禁用 all
+      const picked = await tmpIdPicker.pick(ctx, session, atBindings, {
+        ownerKey: atUser.id,
+        ownerName: atUser.name || '',
+        allowAll: false
+      });
+      if (picked === null) {
+        return // 已列出序号等待用户回复
+      }
+      if (picked.length > 1) {
+        const results = []
+        for (const id of picked) {
+          const r = await module.exports(ctx, session, serverType, id, date)
+          if (r != null) results.push(r)
+        }
+        return results.length === 1 ? results[0] : results
+      }
+      tmpId = picked[0];
     }
-    queryQQ = id;
-    let guildBindData = await guildBind.get(ctx.database, session.platform, queryQQ);
-    if (!guildBindData) {
-      return `该用户没有绑定玩家编号`;
-    }
-    tmpId = guildBindData.tmp_id;
   }
 
+  // 注意：足迹出图量大（Puppeteer 渲染 + 大量历史点位），刻意**不支持 all**，
+  // 避免一次请求打满服务器；两处 pick 都传 allowAll:false 关掉挂起期的 all。
   if (tmpId && isNaN(tmpId)) {
     return `请输入正确的玩家编号，或绑定玩家编号`
   }
 
   // 如果没有传入tmpId，尝试从绑定记录获取（多绑定时会列出序号供选择，支持多选=发多张足迹图）
+  // 足迹不出图量大，禁用 all（避免一次请求打满服务器）
   if (!tmpId) {
     const bindings = await guildBind.list(ctx.database, session.platform, session.userId)
     if (bindings.length === 0) {
       return `请输入正确的玩家编号，或绑定玩家编号`
     }
-    const picked = await tmpIdPicker.pick(ctx, session, bindings)
+    const picked = await tmpIdPicker.pick(ctx, session, bindings, { allowAll: false })
     if (picked === null) {
       return // 已列出序号等待用户回复
     }
