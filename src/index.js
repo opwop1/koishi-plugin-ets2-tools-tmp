@@ -270,6 +270,8 @@ function registerBaseCommands(ctx, cfg) {
                 if (bindings.length === 0) {
                     return '还没有绑定编号，使用「绑定 tmpId」添加';
                 }
+                // 旧绑定缺名字的先补查并写回
+                await guildBind.ensureNames(ctx, bindings);
                 const lines = bindings.map((b, i) => `${i + 1}. ${b.tmp_name || '未知'} (${b.tmp_id})`);
                 return `已绑定 ${bindings.length} 个编号：\n${lines.join('\n')}${bindings.length > 1 ? '\n查询时会列出序号供选择；使用「解绑 序号」可删除' : ''}`;
             });
@@ -283,6 +285,7 @@ function registerBaseCommands(ctx, cfg) {
                 if (bindings.length === 0) {
                     return '还没有绑定编号';
                 }
+                await guildBind.ensureNames(ctx, bindings);
                 if (!index) {
                     return '请输入要解绑的序号或 all（序号见「我的绑定」）';
                 }

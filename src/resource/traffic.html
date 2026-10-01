@@ -265,15 +265,15 @@
           return [x / 2.598541 + mapConfig.promods.multipliers.x, y / 2.598541 + mapConfig.promods.multipliers.y];
         }
       },
-      // 美卡（ATS）：换算参数来自瓦片导出配置 TileMapInfo.json
+      // 美卡（ATS）：换算参数来自瓦片导出配置 TileMapInfo.json（tmp-ats-promods）
       ats: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-ats-yellow/Tiles/{z}/{x}/{y}.png',
-        multipliers: { x: 97626.58, y: 64321.45 },
+        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-ats-promods-yellow/Tiles/{z}/{x}/{y}.png',
+        multipliers: { x: 97335.94, y: 70182.92 },
         breakpoints: {},
         bounds: { y: 131072, x: 131072 },
         maxZoom: 8, minZoom: 0,
         calculateMapCoordinate(x, y) {
-          return [x / 1.230185 + mapConfig.ats.multipliers.x, y / 1.230185 + mapConfig.ats.multipliers.y];
+          return [x / 1.2414298 + mapConfig.ats.multipliers.x, y / 1.2414298 + mapConfig.ats.multipliers.y];
         }
       }
     };

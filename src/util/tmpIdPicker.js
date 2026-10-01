@@ -5,6 +5,7 @@
  */
 const MAX_PICK = 5;            // 单次多选上限
 const PICK_TIMEOUT = 60_000;   // 等待回复时长（毫秒）
+const guildBind = require('../database/guildBind');
 
 /**
  * key: `${platform}:${channelId}:${userId}` → { bindings, allowMulti, max, finish }
@@ -59,6 +60,8 @@ function register(ctx) {
  */
 async function pick(ctx, session, bindings, opts = {}) {
     if (!bindings || bindings.length === 0) return [];
+    // 旧绑定的行没有名字：先查接口补全并写回，避免列表显示"未知"
+    await guildBind.ensureNames(ctx, bindings);
     if (bindings.length === 1) return [String(bindings[0].tmp_id)];
     const allowMulti = opts.allowMulti !== false;
     const max = allowMulti ? MAX_PICK : 1;

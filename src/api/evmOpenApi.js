@@ -46,11 +46,13 @@ module.exports = {
     },
     /**
      * 查询在线玩家
+     * @param game 可选，2=美卡（接口不传默认欧卡）
      */
-    async mapPlayerList(http, serverId, ax, ay, bx, by) {
+    async mapPlayerList(http, serverId, ax, ay, bx, by, game) {
         let result = null
         try {
-            result = await requestWithFallback(http, `/map/playerList?aAxisX=${ax}&aAxisY=${ay}&bAxisX=${bx}&bAxisY=${by}&serverId=${serverId}`)
+            const gameParam = game ? `&game=${game}` : ''
+            result = await requestWithFallback(http, `/map/playerList?aAxisX=${ax}&aAxisY=${ay}&bAxisX=${bx}&bAxisY=${by}&serverId=${serverId}${gameParam}`)
         } catch {
             return {
                 error: true
