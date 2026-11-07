@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Version Update</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: #06060b;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #container {
+      width: 560px;
+      background: #0a0a12;
+      position: relative;
+      overflow: hidden;
+      padding-bottom: 16px;
+    }
+
+    /* ===== 背景：网格 + 光晕 ===== */
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 200, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 200, 255, 0.03) 1px, transparent 1px);
+      background-size: 26px 26px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-top {
+      position: absolute;
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 620px;
+      height: 360px;
+      background: radial-gradient(ellipse at center, rgba(0, 200, 255, 0.16) 0%, rgba(0, 200, 255, 0.04) 45%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .scan-line {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.35), transparent);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /* ===== 顶部 ===== */
+    .header {
+      position: relative;
+      z-index: 2;
+      padding: 22px 26px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid rgba(0, 200, 255, 0.1);
+      background: linear-gradient(180deg, rgba(0, 200, 255, 0.07) 0%, transparent 100%);
+    }
+
+    .header-badge {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 23px;
+      background: linear-gradient(145deg, rgba(0, 200, 255, 0.22), rgba(0, 200, 255, 0.06));
+      border: 1px solid rgba(0, 200, 255, 0.32);
+      box-shadow: 0 0 18px rgba(0, 200, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .header-text { flex: 1; min-width: 0; }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #eaf6ff;
+      letter-spacing: 1.5px;
+      line-height: 1.25;
+    }
+
+    .header-title em {
+      font-style: normal;
+      color: #00c8ff;
+      text-shadow: 0 0 14px rgba(0, 200, 255, 0.55);
+    }
+
+    .header-sub {
+      margin-top: 3px;
+      font-size: 10px;
+      letter-spacing: 3.2px;
+      color: #3d5570;
+      text-transform: uppercase;
+    }
+
+    .stage-tag {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      color: #ffb545;
+      background: rgba(255, 181, 69, 0.1);
+      border: 1px solid rgba(255, 181, 69, 0.34);
+      box-shadow: 0 0 14px rgba(255, 181, 69, 0.16);
+    }
+
+    .stage-tag:empty { display: none; }
+
+    /* ===== 版本对比 ===== */
+    .hero {
+      position: relative;
+      z-index: 2;
+      margin: 20px 20px 0;
+      padding: 22px 20px 20px;
+      border-radius: 16px;
+      background: linear-gradient(160deg, rgba(0, 200, 255, 0.06) 0%, rgba(0, 200, 255, 0.012) 55%, rgba(0, 255, 136, 0.03) 100%);
+      border: 1px solid rgba(0, 200, 255, 0.14);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(0, 200, 255, 0.08);
+    }
+
+    /* 四角装饰 */
+    .hero::before,
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid rgba(0, 200, 255, 0.5);
+    }
+    .hero::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-top-left-radius: 16px; }
+    .hero::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-bottom-right-radius: 16px; }
+
+    .hero-caption {
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #3d5570;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .versus {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .ver {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      padding: 14px 8px 12px;
+      border-radius: 12px;
+    }
+
+    .ver-label {
+      font-size: 11px;
+      letter-spacing: 1.6px;
+      margin-bottom: 9px;
+      font-weight: 600;
+    }
+
+    .ver-value {
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* 旧版本 */
+    .ver.old {
+      background: rgba(255, 255, 255, 0.018);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .ver.old .ver-label { color: #5a6878; }
+    .ver.old .ver-value {
+      font-size: 24px;
+      color: #8b98a8;
+      text-decoration: line-through;
+      text-decoration-color: rgba(255, 92, 92, 0.6);
+      text-decoration-thickness: 1.5px;
+    }
+
+    /* 新版本 */
+    .ver.new-ver {
+      background: linear-gradient(160deg, rgba(0, 200, 255, 0.16) 0%, rgba(0, 255, 136, 0.05) 100%);
+      border: 1px solid rgba(0, 200, 255, 0.45);
+      box-shadow: 0 0 24px rgba(0, 200, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+    .ver.new-ver .ver-label { color: #7fe3ff; }
+    .ver.new-ver .ver-value {
+      font-size: 32px;
+      color: #ffffff;
+      text-shadow: 0 0 16px rgba(0, 200, 255, 0.7), 0 0 34px rgba(0, 200, 255, 0.35);
+    }
+
+    .new-flag {
+      position: absolute;
+      top: -9px;
+      right: -7px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      padding: 3px 8px;
+      border-radius: 9px;
+      color: #04121a;
+      background: linear-gradient(135deg, #00ff88, #00c8ff);
+      box-shadow: 0 0 14px rgba(0, 255, 136, 0.5);
+    }
+
+    /* 中间箭头 */
+    .arrow {
+      flex-shrink: 0;
+      width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .arrow svg { display: block; filter: drop-shadow(0 0 7px rgba(0, 200, 255, 0.55)); }
+
+    /* ===== 信息区 ===== */
+    .info {
+      position: relative;
+      z-index: 2;
+      margin: 16px 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.022);
+      border: 1px solid rgba(255, 255, 255, 0.055);
+    }
+
+    .info-icon {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      background: rgba(0, 200, 255, 0.1);
+      border: 1px solid rgba(0, 200, 255, 0.2);
+    }
+
+    .info-key {
+      font-size: 12px;
+      color: #5d7089;
+      letter-spacing: 0.6px;
+      flex-shrink: 0;
+      min-width: 96px;
+    }
+
+    .info-val {
+      margin-left: auto;
+      font-size: 14px;
+      font-weight: 700;
+      color: #cfe6f7;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .info-row.hl .info-val { color: #00ff9d; }
+
+    /* 支持版本「旧 → 新」对比 */
+    .v-from {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #7d8b9c;
+      text-decoration: line-through;
+      text-decoration-color: rgba(255, 92, 92, 0.5);
+      text-decoration-thickness: 1px;
+    }
+
+    .v-to {
+      color: #00ff9d;
+      text-shadow: 0 0 10px rgba(0, 255, 157, 0.38);
+    }
+
+    .v-same { color: #9fb3c6; font-weight: 600; }
+
+    .v-none { color: #3d5570; }
+
+    .mini-arrow { display: block; flex-shrink: 0; }
+
+    .tag-chg {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      padding: 2px 7px;
+      border-radius: 8px;
+      color: #04121a;
+      background: linear-gradient(135deg, #00ff88, #00c8ff);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.45);
+    }
+
+    .tag-same {
+      font-size: 10px;
+      letter-spacing: 0.6px;
+      padding: 2px 7px;
+      border-radius: 8px;
+      color: #5d7089;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    /* 支持版本有变化 → 整行高亮 + 左侧强调条 */
+    .info-row.changed {
+      position: relative;
+      border-color: rgba(0, 255, 157, 0.32);
+      background: rgba(0, 255, 157, 0.05);
+      box-shadow: inset 0 0 20px rgba(0, 255, 157, 0.07);
+    }
+
+    .info-row.changed::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 7px;
+      bottom: 7px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: linear-gradient(180deg, #00ff88, #00c8ff);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+    }
+
+    /* ===== 更新文件列表 ===== */
+    .files {
+      position: relative;
+      z-index: 2;
+      margin: 14px 22px 0;
+      padding: 13px 15px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.022);
+      border: 1px solid rgba(255, 255, 255, 0.055);
+    }
+
+    .files-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 9px;
+    }
+
+    .files-icon {
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      background: rgba(0, 200, 255, 0.1);
+      border: 1px solid rgba(0, 200, 255, 0.2);
+    }
+
+    .files-title {
+      font-size: 12px;
+      color: #5d7089;
+      letter-spacing: 0.6px;
+    }
+
+    .files-count {
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 800;
+      color: #00c8ff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .files-note {
+      margin-bottom: 8px;
+      font-size: 10.5px;
+      line-height: 1.5;
+      color: #7d8b9c;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 190px;
+      overflow: hidden;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+      font-family: 'Cascadia Mono', 'Consolas', monospace;
+      color: #9fb3c6;
+      line-height: 1.45;
+    }
+
+    .file-kind {
+      flex-shrink: 0;
+      width: 34px;
+      text-align: center;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      padding: 1px 0;
+      border-radius: 5px;
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    }
+
+    .file-kind.k-modified { color: #04121a; background: linear-gradient(135deg, #00ff88, #00c8ff); }
+    .file-kind.k-added    { color: #04121a; background: #00ff9d; }
+    .file-kind.k-removed  { color: #ffd9d9; background: rgba(255, 92, 92, 0.28); }
+    .file-kind.k-unknown  { color: #5d7089; background: rgba(255, 255, 255, 0.05); }
+
+    .file-path {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-more {
+      margin-top: 7px;
+      font-size: 10.5px;
+      color: #5d7089;
+    }
+
+    .files-empty {
+      font-size: 12px;
+      color: #5d7089;
+    }
+
+    /* ===== 附加文本 ===== */
+    .extra {
+      position: relative;
+      z-index: 2;
+      margin: 12px 22px 0;
+      padding: 11px 14px;
+      border-radius: 11px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #b9d4e8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: rgba(0, 200, 255, 0.05);
+      border: 1px solid rgba(0, 200, 255, 0.16);
+    }
+
+    .extra:empty { display: none; }
+
+    /* ===== 底部 ===== */
+    .footer {
+      position: relative;
+      z-index: 2;
+      margin-top: 16px;
+      padding: 0 22px;
+      text-align: center;
+    }
+
+    .footer-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.2), transparent);
+      margin-bottom: 10px;
+    }
+
+    .footer-text {
+      font-size: 9.5px;
+      letter-spacing: 2.6px;
+      color: #22303e;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div id="container">
+  <div class="grid-bg"></div>
+  <div class="glow-top"></div>
+  <div class="scan-line"></div>
+
+  <div class="header">
+    <div class="header-badge">📢</div>
+    <div class="header-text">
+      <div class="header-title">TRUCKERS<em>MP</em> 版本更新</div>
+      <div class="header-sub">Version Update Notice</div>
+    </div>
+    <div class="stage-tag" id="stage-tag"></div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-caption">Version Changed</div>
+    <div class="versus">
+      <div class="ver old">
+        <div class="ver-label">旧版本</div>
+        <div class="ver-value" id="old-name">-</div>
+      </div>
+      <div class="arrow">
+        <svg width="52" height="26" viewBox="0 0 52 26" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- 注意：水平线的 objectBoundingBox 高度为 0，渐变会塌缩 → 必须用 userSpaceOnUse -->
+            <linearGradient id="arw" gradientUnits="userSpaceOnUse" x1="3" y1="13" x2="32" y2="13">
+              <stop offset="0%" stop-color="rgba(0,200,255,0.35)"/>
+              <stop offset="100%" stop-color="#00c8ff"/>
+            </linearGradient>
+          </defs>
+          <path d="M3 13 H32" stroke="url(#arw)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M29 5 L39 13 L29 21" fill="none" stroke="#00ff88" stroke-width="3"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="ver new-ver">
+        <div class="new-flag">NEW</div>
+        <div class="ver-label">新版本</div>
+        <div class="ver-value" id="new-name">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info" id="info">
+    <div class="info-row">
+      <div class="info-icon">🕒</div>
+      <div class="info-key">更新时间</div>
+      <div class="info-val" id="time">-</div>
+    </div>
+    <div class="info-row hl" id="ets-row">
+      <div class="info-icon">🚛</div>
+      <div class="info-key">欧卡支持版本</div>
+      <div class="info-val" id="ets-ver"></div>
+    </div>
+    <div class="info-row hl" id="ats-row">
+      <div class="info-icon">🚚</div>
+      <div class="info-key">美卡支持版本</div>
+      <div class="info-val" id="ats-ver"></div>
+    </div>
+  </div>
+
+  <div class="files" id="files-block">
+    <div class="files-head">
+      <div class="files-icon">📦</div>
+      <div class="files-title">更新文件</div>
+      <div class="files-count" id="files-count"></div>
+    </div>
+    <div class="files-note" id="files-note"></div>
+    <div class="file-list" id="file-list"></div>
+    <div class="files-more" id="files-more"></div>
+  </div>
+
+  <div class="extra" id="extra"></div>
+
+  <div class="footer">
+    <div class="footer-line"></div>
+    <div class="footer-text">TruckersMP · Version Monitor</div>
+  </div>
+</div>
+
+<script>
+  /* 「旧 → 新」小箭头（纯实色描边，避开水平线渐变塌缩的坑） */
+  var MINI_ARROW =
+    '<svg class="mini-arrow" width="19" height="10" viewBox="0 0 19 10" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M1 5 H12" stroke="#00c8ff" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<path d="M10.5 1.5 L15 5 L10.5 8.5" fill="none" stroke="#00ff88" stroke-width="1.6"' +
+    ' stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function setText(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = (value === undefined || value === null || value === '') ? '-' : String(value);
+  }
+
+  /**
+   * 渲染一条「游戏支持版本」：
+   * - 新旧都拿到且不同 → 旧(删除线) → 新(绿) + 「已更新」标签，整行高亮
+   * - 相同 / 拿不到旧值  → 只显示当前版本 + 「未变化」标签
+   */
+  function setGameVersion(valId, rowId, oldV, newV) {
+    var el = document.getElementById(valId);
+    var row = document.getElementById(rowId);
+    if (!el) return;
+    var hasOld = oldV !== undefined && oldV !== null && oldV !== '';
+    var hasNew = newV !== undefined && newV !== null && newV !== '';
+    var changed = hasOld && hasNew && String(oldV) !== String(newV);
+
+    if (changed) {
+      if (row) row.classList.add('changed');
+      el.innerHTML =
+        '<span class="v-from">' + esc(oldV) + '</span>' +
+        MINI_ARROW +
+        '<span class="v-to">' + esc(newV) + '</span>' +
+        '<span class="tag-chg">已更新</span>';
+      return;
+    }
+
+    if (row) row.classList.remove('changed');
+    if (!hasNew && !hasOld) {
+      el.innerHTML = '<span class="v-none">-</span>';
+      return;
+    }
+    el.innerHTML =
+      '<span class="v-same">' + esc(hasNew ? newV : oldV) + '</span>' +
+      '<span class="tag-same">未变化</span>';
+  }
+
+  /* 变化类型 → 展示用标签与样式类 */
+  var KIND_LABEL = { modified: '更新', added: '新增', removed: '移除', unknown: '文件' };
+
+  /* 卡片里最多列多少个文件（超出的用「等共 N 个」收尾，避免卡片无限长） */
+  var MAX_FILES_IN_CARD = 12;
+
+  /**
+   * 渲染更新文件区块。
+   * - filesUnavailable → 清单查询失败（不能显示成「没有变化」）
+   * - files 为空        → 确实没有文件变化
+   */
+  function setChangedFiles(files, snapshotMissing, unavailable) {
+    var list = Array.isArray(files) ? files : [];
+    var listEl = document.getElementById('file-list');
+    var countEl = document.getElementById('files-count');
+    var noteEl = document.getElementById('files-note');
+    var moreEl = document.getElementById('files-more');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = list.length > 0 ? list.length + ' 个' : '';
+
+    if (unavailable) {
+      if (noteEl) noteEl.textContent = '';
+      if (moreEl) moreEl.textContent = '';
+      listEl.innerHTML = '<div class="files-empty">文件清单获取失败，无法比对变化</div>';
+      return;
+    }
+
+    if (list.length === 0) {
+      if (noteEl) noteEl.textContent = '';
+      if (moreEl) moreEl.textContent = '';
+      listEl.innerHTML = '<div class="files-empty">未检测到文件变化</div>';
+      return;
+    }
+
+    if (noteEl) {
+      noteEl.textContent = snapshotMissing
+        ? '未留存上次清单，以下为当前版本完整文件列表'
+        : '以下文件相对上次检查发生了 MD5 变化';
+    }
+
+    var shown = list.slice(0, MAX_FILES_IN_CARD);
+    listEl.innerHTML = shown.map(function (f) {
+      var kind = KIND_LABEL[f.kind] ? f.kind : 'unknown';
+      return '<div class="file-row">' +
+        '<span class="file-kind k-' + kind + '">' + KIND_LABEL[kind] + '</span>' +
+        '<span class="file-path" title="' + esc(f.path) + '">' + esc(f.path) + '</span>' +
+        '</div>';
+    }).join('');
+
+    if (moreEl) {
+      moreEl.textContent = list.length > shown.length
+        ? '… 等共 ' + list.length + ' 个文件'
+        : '';
+    }
+  }
+
+  function setData(data) {
+    data = data || {};
+    setText('old-name', data.oldName);
+    setText('new-name', data.newName);
+    setText('time', data.time);
+    setText('stage-tag', data.stage);
+    setGameVersion('ets-ver', 'ets-row', data.etsOld, data.etsNew);
+    setGameVersion('ats-ver', 'ats-row', data.atsOld, data.atsNew);
+    setChangedFiles(data.files, data.filesSnapshotMissing, data.filesUnavailable);
+
+    var extraEl = document.getElementById('extra');
+    if (extraEl) {
+      var extra = data.extraText == null ? '' : String(data.extraText).trim();
+      extraEl.textContent = extra;
+    }
+  }
+</script>
+</body>
+</html>

@@ -133,7 +133,11 @@ exports.Config = koishi_1.Schema.intersect([
             notifyType: koishi_1.Schema.union([
                 koishi_1.Schema.const(1).description('文字'),
                 koishi_1.Schema.const(2).description('图片')
-            ]).default(1).description('版本更新通知形式（图片较精美，需启用 puppeteer；渲染失败会自动回退文字）')
+            ]).default(1).description('版本更新通知形式（图片较精美，需启用 puppeteer；渲染失败会自动回退文字）'),
+            extraText: koishi_1.Schema.string()
+                .role('textarea')
+                .description('更新通知末尾附加的文本（留空则不追加）。支持用 \\n 表示换行')
+                .default('')
         }).description("TMP版本更新查询配置"),
         steamApi: koishi_1.Schema.object({
             key: koishi_1.Schema.string().description("Steam API Key，用于查询游戏时长")
@@ -562,6 +566,7 @@ function apply(ctx, cfg) {
             checkInterval: cfg.tmpVersionCheck.checkInterval,
             groups: cfg.tmpVersionCheck.groups,
             notifyType: cfg.tmpVersionCheck.notifyType,
+            extraText: cfg.tmpVersionCheck.extraText,
             debugMode: cfg.debugMode,
             debug: cfg.tmpActivityService?.debug
         };
