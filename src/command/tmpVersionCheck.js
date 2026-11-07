@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.VersionCheckService = void 0;
 
 const koishi_1 = require("koishi");
+const path_1 = require("path");
+const common_1 = require("../util/common");
 
 class VersionCheckService {
     constructor(ctx, config) {
@@ -71,6 +73,7 @@ class VersionCheckService {
             if (response && response.name) {
                 const versionInfo = {
                     name: response.name,
+                    stage: response.stage,
                     time: this.convertToUTC8(response.time),
                     supported_game_version: response.supported_game_version,
                     supported_ats_game_version: response.supported_ats_game_version
@@ -110,23 +113,102 @@ class VersionCheckService {
     }
 
     async sendVersionUpdateNotification(oldVersion, newVersion) {
-        const message = `📢 TMP版本更新通知
+        this.logger.info(`发送版本更新通知到 ${this.cfg.groups.length} 个群组`);
+
+        // 内容只构建一次（图片渲染较慢，不要每个群各渲染一遍）
+        const message = await this.buildUpdateContent(oldVersion, newVersion);
+        const isImage = typeof message === "object" && message !== null;
+
+        for (const groupId of this.cfg.groups) {
+            try {
+                await this.sendToGroup(groupId, message);
+                this.logger.info(`已发送版本更新通知到群组 ${groupId}（${isImage ? "图片" : "文字"}）`);
+            } catch (error) {
+                this.logger.error(`发送版本更新通知到群组 ${groupId} 失败:`, error.message);
+            }
+        }
+    }
+
+    /**
+     * 构建通知内容。notifyType：1=文字（默认），2=图片。
+     * 图片渲染失败（如未启用 puppeteer）会**自动回退为文字**，保证通知不丢。
+     * @returns 文字字符串，或图片 segment 元素
+     */
+    async buildUpdateContent(oldVersion, newVersion) {
+        const notifyType = Number(this.cfg.notifyType) || 1;
+        if (notifyType === 2) {
+            const image = await this.renderUpdateImage(oldVersion, newVersion);
+            if (image) {
+                return image;
+            }
+        }
+        return this.buildUpdateText(oldVersion, newVersion);
+    }
+
+    buildUpdateText(oldVersion, newVersion) {
+        return `📢 TMP版本更新通知
 
 旧版本: ${oldVersion.name}
 新版本: ${newVersion.name}
 
 更新时间: ${newVersion.time}（UTC+8）
-欧卡支持版本: ${newVersion.supported_game_version}
-美卡支持版本: ${newVersion.supported_ats_game_version}`;
+欧卡支持版本: ${this.formatGameVersion(oldVersion.supported_game_version, newVersion.supported_game_version)}
+美卡支持版本: ${this.formatGameVersion(oldVersion.supported_ats_game_version, newVersion.supported_ats_game_version)}`;
+    }
 
-        this.logger.info(`发送版本更新通知到 ${this.cfg.groups.length} 个群组`);
+    /**
+     * 游戏支持版本：有变化时显示「旧 → 新」，没变则只显示当前值。
+     */
+    formatGameVersion(oldValue, newValue) {
+        if (oldValue && newValue && String(oldValue) !== String(newValue)) {
+            return `${oldValue} → ${newValue}`;
+        }
+        return newValue || oldValue || "未知";
+    }
 
-        for (const groupId of this.cfg.groups) {
-            try {
-                await this.sendToGroup(groupId, message);
-                this.logger.info(`已发送版本更新通知到群组 ${groupId}`);
-            } catch (error) {
-                this.logger.error(`发送版本更新通知到群组 ${groupId} 失败:`, error.message);
+    /**
+     * 用 puppeteer 渲染版本更新卡片
+     * @returns 图片 segment 元素；渲染不可用时返回 null，由调用方回退文字
+     */
+    async renderUpdateImage(oldVersion, newVersion) {
+        if (!this.ctx.puppeteer) {
+            this.logger.warn("未启用 puppeteer，版本更新通知回退为文字形式");
+            return null;
+        }
+        let page;
+        try {
+            const data = {
+                oldName: oldVersion.name,
+                newName: newVersion.name,
+                time: newVersion.time,
+                stage: newVersion.stage,
+                // 游戏支持版本也带上旧值，卡片才能显示「旧 → 新」对比
+                etsOld: oldVersion.supported_game_version,
+                etsNew: newVersion.supported_game_version,
+                atsOld: oldVersion.supported_ats_game_version,
+                atsNew: newVersion.supported_ats_game_version
+            };
+            const htmlPath = path_1.resolve(__dirname, "../resource/version-update.html");
+            this.logger.debug(`渲染版本更新卡片: ${htmlPath}`);
+
+            page = await this.ctx.puppeteer.page();
+            await page.setViewport({ width: 560, height: 900, deviceScaleFactor: 2 });
+            await page.goto(`file:///${htmlPath}`);
+            await page.evaluate(`setData(${JSON.stringify(data)})`);
+            await common_1.sleep(100);
+            await page.waitForNetworkIdle();
+
+            const element = await page.$("#container");
+            if (!element) {
+                throw new Error("未找到 #container");
+            }
+            return koishi_1.segment.image(await element.screenshot({ encoding: "binary" }), "image/jpeg");
+        } catch (error) {
+            this.logger.error(`渲染版本更新卡片失败，回退为文字形式: ${error.message}`);
+            return null;
+        } finally {
+            if (page) {
+                try { await page.close(); } catch { }
             }
         }
     }
