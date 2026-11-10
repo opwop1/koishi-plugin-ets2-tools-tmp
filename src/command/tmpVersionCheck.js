@@ -18,6 +18,7 @@ class VersionCheckService {
         this.currentVersion = null;
         // 上一次检查时的文件清单快照（FilePath -> {md5, type}），用于比对文件变化
         this.fileManifest = null;
+        this.disposed = false;
         this.timers = [];
         this.logger = this.initLogger();
     }
@@ -53,18 +54,51 @@ class VersionCheckService {
 
     setupVersionCheck() {
         this.logger.info("设置TMP版本检查服务");
-        
-        this.logger.debug("启动时立即检查版本");
-        this.checkVersion();
 
         const checkInterval = this.cfg.checkInterval * 60 * 1000;
         this.logger.info(`设置定时版本检查，间隔: ${this.cfg.checkInterval} 分钟`);
-        
-        const intervalTimer = setInterval(async () => {
-            this.logger.debug("执行定时版本检查");
-            await this.checkVersion();
-        }, checkInterval);
-        this.timers.push(intervalTimer);
+
+        // 顺序很重要：先建立文件清单基线，再开始版本检查。
+        // 否则第一次真发生版本更新时 fileManifest 仍是 null，只能退化成“输出完整列表”。
+        this.runInitialCheck()
+            .catch((error) => {
+                this.logger.error("启动版本检查失败:", error.message);
+            })
+            .finally(() => {
+                // 初始化失败也要把定时器挂上，否则整个功能就停摆了
+                if (this.disposed) return;
+                const intervalTimer = setInterval(async () => {
+                    this.logger.debug("执行定时版本检查");
+                    await this.checkVersion();
+                }, checkInterval);
+                this.timers.push(intervalTimer);
+            });
+    }
+
+    /**
+     * 启动时的初始化：先拉文件清单做基线，再做第一次版本检查。
+     */
+    async runInitialCheck() {
+        await this.initBaselineManifest();
+
+        this.logger.debug("启动时立即检查版本");
+        await this.checkVersion();
+    }
+
+    /**
+     * 建立文件清单基线（FilePath -> {md5, type}）。
+     *
+     * files.json 只有“当前版本”的清单、没有历史归档，所以必须在启动时就把当前清单存下来，
+     * 下次版本更新时才能逐文件比对 MD5。基线建立失败不影响功能，只是首次更新会退化成完整列表。
+     */
+    async initBaselineManifest() {
+        const manifest = await this.fetchFileManifest();
+        if (manifest && manifest.size > 0) {
+            this.fileManifest = manifest;
+            this.logger.info(`已建立文件清单基线，共 ${manifest.size} 个文件（版本更新时可精确比对 MD5）`);
+        } else {
+            this.logger.warn("启动时未能建立文件清单基线，首次版本更新将输出完整文件列表");
+        }
     }
 
     async checkVersion() {
@@ -88,12 +122,20 @@ class VersionCheckService {
 
                 this.logger.info(`获取到TMP版本信息: ${versionInfo.name} (${versionInfo.time})`);
 
+                // 基线可能因启动时网络抖动没建立成功，这里顺带补一次（失败也不影响本次检查）
+                if (!this.fileManifest) {
+                    await this.initBaselineManifest();
+                }
+
                 if (this.currentVersion && this.currentVersion.name !== versionInfo.name) {
                     this.logger.info(`检测到版本更新: ${this.currentVersion.name} -> ${versionInfo.name}`);
 
                     // 比对文件 MD5，找出本次更新实际替换了哪些文件
+                    // 返回 null 表示清单查询失败（区别于“没有变化”的空数组）
                     const changedFiles = await this.detectChangedFiles();
-                    if (changedFiles.length > 0) {
+                    if (changedFiles === null) {
+                        this.logger.warn("文件清单获取失败，本次更新通知不包含文件变化");
+                    } else if (changedFiles.length > 0) {
                         this.logger.info(`本次更新涉及 ${changedFiles.length} 个文件变化`);
                     }
 
@@ -425,6 +467,7 @@ class VersionCheckService {
 
     cleanup() {
         this.logger.debug("插件卸载，开始清理版本检查服务资源");
+        this.disposed = true;
         this.timers.forEach((timer) => {
             clearTimeout(timer);
             clearInterval(timer);
