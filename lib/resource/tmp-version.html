@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>TMP Version</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: #06060b;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #container {
+      width: 560px;
+      background: #0a0a12;
+      position: relative;
+      overflow: hidden;
+      padding-bottom: 16px;
+    }
+
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 200, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 200, 255, 0.03) 1px, transparent 1px);
+      background-size: 26px 26px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-top {
+      position: absolute;
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 620px;
+      height: 360px;
+      background: radial-gradient(ellipse at center, rgba(0, 200, 255, 0.16) 0%, rgba(0, 200, 255, 0.04) 45%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .header {
+      position: relative;
+      z-index: 2;
+      padding: 22px 26px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid rgba(0, 200, 255, 0.1);
+      background: linear-gradient(180deg, rgba(0, 200, 255, 0.07) 0%, transparent 100%);
+    }
+
+    .header-badge {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 23px;
+      background: linear-gradient(145deg, rgba(0, 200, 255, 0.22), rgba(0, 200, 255, 0.06));
+      border: 1px solid rgba(0, 200, 255, 0.32);
+      box-shadow: 0 0 18px rgba(0, 200, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .header-text { flex: 1; min-width: 0; }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #eaf6ff;
+      letter-spacing: 1.5px;
+      line-height: 1.25;
+    }
+
+    .header-title em {
+      font-style: normal;
+      color: #00c8ff;
+      text-shadow: 0 0 14px rgba(0, 200, 255, 0.55);
+    }
+
+    .header-sub {
+      margin-top: 3px;
+      font-size: 10px;
+      letter-spacing: 3.2px;
+      color: #3d5570;
+      text-transform: uppercase;
+    }
+
+    .stage-tag {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      color: #ffb545;
+      background: rgba(255, 181, 69, 0.1);
+      border: 1px solid rgba(255, 181, 69, 0.34);
+      box-shadow: 0 0 14px rgba(255, 181, 69, 0.16);
+    }
+
+    .stage-tag:empty { display: none; }
+
+    .hero {
+      position: relative;
+      z-index: 2;
+      padding: 26px 26px 20px;
+      text-align: center;
+    }
+
+    .hero-caption {
+      font-size: 10px;
+      letter-spacing: 3.4px;
+      color: #3d5570;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .version-big {
+      font-size: 42px;
+      font-weight: 800;
+      color: #eaf6ff;
+      letter-spacing: 2px;
+      text-shadow: 0 0 24px rgba(0, 200, 255, 0.4);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .version-numeric {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #5d7089;
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .info {
+      position: relative;
+      z-index: 2;
+      padding: 0 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.022);
+      border: 1px solid rgba(255, 255, 255, 0.055);
+    }
+
+    .info-icon {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      background: rgba(0, 200, 255, 0.1);
+      border: 1px solid rgba(0, 200, 255, 0.2);
+    }
+
+    .info-key {
+      font-size: 12px;
+      color: #5d7089;
+      letter-spacing: 0.6px;
+      flex-shrink: 0;
+      min-width: 96px;
+    }
+
+    .info-val {
+      margin-left: auto;
+      font-size: 14px;
+      font-weight: 700;
+      color: #00ff9d;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .footer {
+      position: relative;
+      z-index: 2;
+      margin-top: 16px;
+      padding: 0 22px;
+      text-align: center;
+    }
+
+    .footer-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.2), transparent);
+      margin-bottom: 10px;
+    }
+
+    .footer-text {
+      font-size: 9.5px;
+      letter-spacing: 2.6px;
+      color: #22303e;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div id="container">
+  <div class="grid-bg"></div>
+  <div class="glow-top"></div>
+
+  <div class="header">
+    <div class="header-badge">🚛</div>
+    <div class="header-text">
+      <div class="header-title">TRUCKERS<em>MP</em> 版本</div>
+      <div class="header-sub">Current Version</div>
+    </div>
+    <div class="stage-tag" id="stage-tag"></div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-caption">Now Running</div>
+    <div class="version-big" id="version-name">-</div>
+    <div class="version-numeric" id="version-numeric"></div>
+  </div>
+
+  <div class="info">
+    <div class="info-row">
+      <div class="info-icon">🕒</div>
+      <div class="info-key">更新时间</div>
+      <div class="info-val" id="time">-</div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">🚛</div>
+      <div class="info-key">欧卡支持版本</div>
+      <div class="info-val" id="ets-ver"></div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">🚚</div>
+      <div class="info-key">美卡支持版本</div>
+      <div class="info-val" id="ats-ver"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-line"></div>
+    <div class="footer-text">TruckersMP · Version Monitor</div>
+  </div>
+</div>
+
+<script>
+  function setText(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = (value === undefined || value === null || value === '') ? '-' : String(value);
+  }
+
+  /**
+   * UTC 时间转 UTC+8 显示
+   */
+  function toUTC8(utcString) {
+    if (!utcString) return '';
+    try {
+      var d = new Date(utcString);
+      if (isNaN(d.getTime())) return String(utcString);
+      var t = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+      var p = function (n) { return String(n).padStart(2, '0'); };
+      return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) +
+        ' ' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+    } catch (e) {
+      return String(utcString);
+    }
+  }
+
+  function setData(data) {
+    data = data || {};
+    setText('version-name', data.name);
+    setText('version-numeric', data.numeric ? 'BUILD ' + data.numeric : '');
+    setText('stage-tag', data.stage);
+    setText('time', toUTC8(data.time));
+    setText('ets-ver', data.ets);
+    setText('ats-ver', data.ats);
+  }
+</script>
+</body>
+</html>

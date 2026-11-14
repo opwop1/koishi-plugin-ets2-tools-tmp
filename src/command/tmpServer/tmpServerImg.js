@@ -22,7 +22,7 @@ module.exports = async (ctx, game) => {
         const element = await page.$("#container");
         return (segment.image(await element.screenshot({
             encoding: "binary"
-        }), "image/jpg"));
+        }), "image/jpeg"));
     }
     catch {
         return '渲染异常，请重试';

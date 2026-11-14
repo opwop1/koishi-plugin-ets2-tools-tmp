@@ -5,6 +5,7 @@ const common = require('../util/common')
 const { PromodsIds, AtsIds, AtsFootprintStartDate, ServerType } = require('../util/constant')
 const evmOpenApi = require('../api/evmOpenApi')
 const guildBind = require('../database/guildBind')
+const qqOfficial = require('../util/qqOfficial')
 const tmpIdPicker = require('../util/tmpIdPicker')
 
 // 足迹统计数据的开始收集日期（仅用于近一年足迹图片中的提示展示）
@@ -101,7 +102,7 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
   // 如果没有传入tmpId，尝试从绑定记录获取（多绑定时会列出序号供选择，支持多选=发多张足迹图）
   // 足迹不出图量大，禁用 all（避免一次请求打满服务器）
   if (!tmpId) {
-    const bindings = await guildBind.list(ctx.database, session.platform, session.userId)
+    const bindings = await guildBind.listWithUnion(ctx.database, session.platform, session.userId, qqOfficial.buildIdentity(session))
     if (bindings.length === 0) {
       return `请输入正确的玩家编号，或绑定玩家编号`
     }
@@ -256,7 +257,7 @@ module.exports = async (ctx, session, serverType, tmpId, date) => {
     return (
       segment.image(await element.screenshot({
         encoding: "binary"
-      }), "image/jpg")
+      }), "image/jpeg")
     )
   } catch (e) {
     return '渲染异常，请重试'

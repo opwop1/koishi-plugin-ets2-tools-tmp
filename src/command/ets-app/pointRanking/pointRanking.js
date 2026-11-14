@@ -40,7 +40,7 @@ module.exports = async (ctx, cfg, session) => {
         let totalPage = 1;
 
         while (currentPage <= totalPage) {
-            const queryUrl = `https://${baseUrl}/api/user/info/list?page=${currentPage}&limit=100&tmpId=&tmpName=&teamId=&qq=&state=0&teamRole=&token=${token}`;
+            const queryUrl = `https://${baseUrl}/api/user/info/list?page=${currentPage}&limit=100&tmpId=&tmpName=&teamId=&qq=&unionid=&state=0&teamRole=&isExecutive=&isManager=&adminUserId=&token=${token}`;
             log(`[积分排行] 请求第 ${currentPage} 页: ${queryUrl.replace(token, "***")}`);
 
             const response = await ctx.http.get(queryUrl, { timeout: 10000 });
@@ -98,10 +98,17 @@ module.exports = async (ctx, cfg, session) => {
         log(`[积分排行] 排行榜前10名已生成, 第一名: ${top10[0]?.tmpName} (${top10[0]?.rewardPoints}积分)`);
 
         // 查询当前用户的排名
+        // onebot 用 QQ 号比对；QQ 官方机器人没有 QQ 号，改用 unionid 比对
         let currentPlayer = null;
+        const official = qqOfficial.isQQOfficial(session);
+        const officialUnionId = official ? (qqOfficial.getQQIdentity(session).unionId || '') : '';
         const currentUserQQ = String(session.userId || '');
-        if (currentUserQQ) {
-            const playerIndex = sortedMembers.findIndex(m => String(m.qq) === currentUserQQ);
+        const hasIdentity = official ? !!officialUnionId : !!currentUserQQ;
+
+        if (hasIdentity) {
+            const playerIndex = official
+                ? sortedMembers.findIndex(m => String(m.unionid || '') !== '' && String(m.unionid) === officialUnionId)
+                : sortedMembers.findIndex(m => String(m.qq) === currentUserQQ);
             if (playerIndex !== -1) {
                 const player = sortedMembers[playerIndex];
                 currentPlayer = {
@@ -114,7 +121,7 @@ module.exports = async (ctx, cfg, session) => {
                 };
                 log(`[积分排行] 找到当前用户: ${currentPlayer.tmpName}, 排名: ${currentPlayer.rank}, 积分: ${currentPlayer.rewardPoints}`);
             } else {
-                log(`[积分排行] 未在车队成员中找到当前用户QQ: ${currentUserQQ}`);
+                log(`[积分排行] 未找到当前用户（${official ? 'unionid=' + officialUnionId : 'QQ=' + currentUserQQ}）`);
             }
         }
 
@@ -138,7 +145,7 @@ module.exports = async (ctx, cfg, session) => {
             const element = await page.$("#container");
             return segment.image(await element.screenshot({
                 encoding: "binary"
-            }), "image/jpg");
+            }), "image/jpeg");
         }
         catch (e) {
             log(`[积分排行] 渲染异常: ${e.message}`);

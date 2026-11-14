@@ -19,7 +19,7 @@ module.exports = async (ctx, session) => {
         const element = await page.$("#dlc-info-container");
         return (segment.image(await element.screenshot({
             encoding: "binary"
-        }), "image/jpg"));
+        }), "image/jpeg"));
     }
     catch (e) {
         console.info(e);

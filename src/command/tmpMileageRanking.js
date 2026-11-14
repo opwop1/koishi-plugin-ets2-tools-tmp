@@ -4,8 +4,12 @@ const common = require('../util/common');
 const evmOpenApi = require('../api/evmOpenApi');
 const guildBind = require('../database/guildBind');
 const tmpIdPicker = require('../util/tmpIdPicker');
-module.exports = async (ctx, session, rankingType, target) => {
-    if (!ctx.puppeteer) {
+const messageRender = require('../util/messageRender');
+const qqOfficial = require('../util/qqOfficial');
+module.exports = async (ctx, cfg, session, rankingType, target) => {
+    // 仅在图片模式下才需要 puppeteer；文本模式不拦截
+    const wantImage = messageRender.wantImage(messageRender.readType(cfg, 'tmpMileageRanking.type'));
+    if (wantImage && !ctx.puppeteer) {
         return '未启用 Puppeteer 功能';
     }
     // 查询排行榜信息
@@ -49,26 +53,73 @@ module.exports = async (ctx, session, rankingType, target) => {
         mileageRankingList: mileageRankingList.data,
         playerMileageRanking: playerMileageRanking
     };
-    let page;
-    try {
-        page = await ctx.puppeteer.page();
-        await page.setViewport({ width: 1000, height: 1000, deviceScaleFactor: 2 });
-        await page.goto(`file:///${resolve(__dirname, '../resource/mileage-leaderboard.html')}`);
-        await page.evaluate(`setData(${JSON.stringify(data)})`);
-        await page.waitForNetworkIdle();
-        await common.sleep(500);
-        const element = await page.$("#container");
-        return (segment.image(await element.screenshot({
-            encoding: "binary"
-        }), "image/jpg"));
-    }
-    catch (e) {
-        console.info(e);
-        return '渲染异常，请重试';
-    }
-    finally {
-        if (page) {
-            await page.close();
+
+    const buttons = buildRankingButtons(session, rankingType);
+    const text = buildRankingText(data);
+
+    return await messageRender.renderByType(ctx, session, cfg, 'tmpMileageRanking.type', {
+        text,
+        buttons,
+        caption: (Number(rankingType) === 2 ? '今日' : '总') + '里程排行榜',
+        alt: '里程排行榜',
+        image: async () => {
+            if (!ctx.puppeteer) return null;
+            let page;
+            try {
+                page = await ctx.puppeteer.page();
+                await page.setViewport({ width: 1000, height: 1000, deviceScaleFactor: 2 });
+                await page.goto(`file:///${resolve(__dirname, '../resource/mileage-leaderboard.html')}`);
+                await page.evaluate(`setData(${JSON.stringify(data)})`);
+                await page.waitForNetworkIdle();
+                await common.sleep(500);
+                const element = await page.$("#container");
+                return segment.image(await element.screenshot({ encoding: "binary" }), "image/jpeg");
+            } catch (e) {
+                console.info(e);
+                return null;
+            } finally {
+                if (page) {
+                    try { await page.close(); } catch { }
+                }
+            }
         }
-    }
+    });
 };
+
+/**
+ * 排行榜按钮（仅 QQ 官方机器人可见）。
+ */
+function buildRankingButtons(session, rankingType) {
+    if (!qqOfficial.isQQOfficial(session)) return [];
+    const rows = [];
+    rows.push([qqOfficial.inputButton(
+        Number(rankingType) === 2 ? '查看总榜' : '查看今日榜',
+        Number(rankingType) === 2 ? '里程排行榜' : '今日里程排行榜',
+        true
+    )]);
+    rows.push([qqOfficial.inputButton('我的绑定', '我的绑定')]);
+    return rows;
+}
+
+/**
+ * 排行榜文字版。
+ */
+function buildRankingText(data) {
+    const typeText = Number(data.rankingType) === 2 ? '今日' : '总';
+    const list = Array.isArray(data.mileageRankingList) ? data.mileageRankingList : [];
+    const lines = [`## 里程排行榜（${typeText}）`, ''];
+    list.slice(0, 10).forEach((p, i) => {
+        lines.push(`${i + 1}. ${p.name || '未知'}  ${formatKm(p.mileage)}`);
+    });
+    if (data.playerMileageRanking) {
+        const me = data.playerMileageRanking;
+        const rank = list.indexOf(me) + 1;
+        lines.push('', `**你的排名**：第 ${rank || '-'} 名  ${formatKm(me.mileage)}`);
+    }
+    return lines.join('\n');
+}
+
+function formatKm(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? `${n.toLocaleString('en-US')} km` : '-';
+}

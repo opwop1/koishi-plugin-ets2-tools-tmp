@@ -4,12 +4,15 @@ exports.Config = exports.inject = exports.name = void 0;
 exports.apply = apply;
 
 const koishi_1 = require("koishi");
+const qqOfficial = require('./util/qqOfficial');
 const model = require('./database/model');
 const guildBind = require('./database/guildBind');
 const { ServerType } = require('./util/constant');
 const { MileageRankingType } = require('./util/constant');
 const { LeadRoleCallMessage, LeadRoleCallTime } = require('./util/constant');
 const tmpIdPicker = require('./util/tmpIdPicker');
+const commandSuggestMiddleware = require('./util/commandSuggestMiddleware');
+const localImageHost = require('./util/localImageHost');
 
 const commands = {
     tmpQuery: require('./command/tmpQuery/tmpQuery'),
@@ -114,6 +117,18 @@ exports.Config = koishi_1.Schema.intersect([
                 koishi_1.Schema.const(2).description('热力图')
             ]).default(1).description('路况信息展示方式'),
         }).description('路况查询配置'),
+        tmpMileageRanking: koishi_1.Schema.object({
+            type: koishi_1.Schema.union([
+                koishi_1.Schema.const(1).description('文字'),
+                koishi_1.Schema.const(2).description('图片')
+            ]).default(2).description('里程排行榜展示方式')
+        }).description('里程排行榜配置'),
+        tmpVtcMileageRanking: koishi_1.Schema.object({
+            type: koishi_1.Schema.union([
+                koishi_1.Schema.const(1).description('文字'),
+                koishi_1.Schema.const(2).description('图片')
+            ]).default(2).description('VTC里程排行榜展示方式')
+        }).description('VTC里程排行榜配置'),
         tmpServer: koishi_1.Schema.object({
             type: koishi_1.Schema.union([
                 koishi_1.Schema.const(1).description('文字'),
@@ -126,6 +141,12 @@ exports.Config = koishi_1.Schema.intersect([
                 koishi_1.Schema.const(2).description('图片')
             ]).default(1).description('车队在线成员展示方式')
         }).description('车队在线成员查询'),
+        tmpVersion: koishi_1.Schema.object({
+            type: koishi_1.Schema.union([
+                koishi_1.Schema.const(1).description('文字'),
+                koishi_1.Schema.const(2).description('图片')
+            ]).default(2).description('tmp版本展示方式')
+        }).description('tmp版本查询配置'),
 
         tmpVersionCheck: koishi_1.Schema.object({
             checkInterval: koishi_1.Schema.number().description("版本检查间隔（分钟）").default(30),
@@ -215,12 +236,105 @@ exports.Config = koishi_1.Schema.intersect([
                 logMessageSending: koishi_1.Schema.boolean().description("记录消息发送详情").default(false)
             }).description("开发者选项")
         }).description("活动查询配置")
-    }).description('功能配置')
+    }).description('功能配置'),
+    koishi_1.Schema.object({
+        commandSuggest: koishi_1.Schema.object({
+            enable: koishi_1.Schema.boolean().description("启用「猜你想问」指令纠错提示（打错指令时给出相近指令建议）").default(true),
+            type: koishi_1.Schema.union([
+                koishi_1.Schema.const(1).description('文字'),
+                koishi_1.Schema.const(2).description('图片')
+            ]).default(1).description('「猜你想问」提示的展示方式（图片模式下官方机器人会发图片并在下方附带按钮）'),
+            maxDistance: koishi_1.Schema.number().description("最大编辑距离：用户输入与指令名的字符差异上限，越大越宽松（默认按长度自适应，此项留空即自适应）")
+        }).description("指令纠错配置"),
+        qqOfficial: koishi_1.Schema.object({
+            enable: koishi_1.Schema.boolean().description("启用 QQ 官方机器人增强：文本用 markdown 发送、附带交互按钮（仅对 qq/qqguild 适配器生效，onebot 不受影响）").default(true),
+            showQueryButtons: koishi_1.Schema.boolean().description("在查询类结果下方附加常用查询按钮（仅官方机器人）").default(true),
+            publicBaseUrl: koishi_1.Schema.string()
+                .role('link')
+                .description("Koishi 对外公网地址（如 https://bd.114512.xyz:5155）。填写后图片会存为本地文件并以公网 URL 发送，不受 QQ 官方 100 张图片限制，且手机端可正常显示；留空则使用 QQ 官方素材上传")
+                .default('')
+        }).description("QQ 官方机器人配置")
+    }).description("通用与适配器配置")
 ]);
 
 
-function logDisabledCommands(ctx, cfg) {
-    const commandFlags = cfg.commands || {};
+/**
+ * 收集本插件注册的指令名，供「猜你想问」使用。
+ * 只取指令定义里第一个空格前的部分（去掉参数说明）。
+ */
+function collectCommandNames(cfg) {
+    const flags = cfg.commands || {};
+    const list = [];
+    const add = (enabled, defs) => {
+        if (!enabled) return;
+        for (const def of defs) list.push(String(def).split(' ')[0]);
+    };
+
+    add(flags.tmpQuery, ['查询']);
+    add(flags.tmpServer, ['美卡服务器', '欧卡服务器']);
+    add(flags.tmpBind, ['绑定', '我的绑定', '设为默认', '解绑']);
+    add(flags.tmpTraffic, ['路况']);
+    add(flags.tmpPosition, ['定位']);
+    add(flags.tmpVersion, ['tmp版本']);
+    add(flags.tmpDlcMap, ['地图dlc价格']);
+    add(flags.tmpMileageRanking, ['里程排行榜', '今日里程排行榜']);
+    add(flags.tmpVtcMileageRanking, ['vtc里程排行榜', 'vtc今日里程排行榜']);
+    add(flags.pointRanking, ['积分排行']);
+    add(flags.tmpVtc, ['vtc查询']);
+    add(flags.tmpVtcOnline, ['车队在线成员']);
+    add(flags.tmpFootprint, [
+        '近一年足迹', '近一年足迹p', '近一年足迹美',
+        '近一个月足迹美', '近七日足迹美', '昨日足迹美', '今日足迹美',
+        '近一个月足迹', '近一个月足迹p', '近七日足迹', '近七日足迹p',
+        '昨日足迹', '昨日足迹p', '今日足迹', '今日足迹p',
+    ]);
+    add(flags.resetPassword, ['重置密码']);
+    add(flags.mainSettings, ['查询积分']);
+    add(flags.changePoint, ['积分修改']);
+
+    // 无开关、始终注册的指令
+    list.push('规则查询');
+
+    return list;
+}
+
+/**
+ * 注册「猜你想问」中间件。
+ */
+/**
+ * 注册本地图片托管路由（仅配置了公网地址时启用）。
+ */
+function setupLocalImageHost(ctx, cfg) {
+    try {
+        const baseUrl = localImageHost.getPublicBaseUrl(cfg);
+        if (!baseUrl) {
+            if (cfg.debugMode) ctx.logger.debug('[本地图片] 未配置 qqOfficial.publicBaseUrl，图片将由 QQ 官方素材接口上传');
+            return;
+        }
+        const dir = localImageHost.registerStaticRoute(ctx, cfg);
+        if (dir) {
+            ctx.logger.info(`[本地图片] 已启用，访问地址: ${baseUrl}${localImageHost.ROUTE_PREFIX}/，存储目录: ${dir}`);
+        } else {
+            ctx.logger.warn('[本地图片] 未找到 server 服务，图片将回退为 QQ 官方素材上传');
+        }
+    } catch (error) {
+        ctx.logger.error('[本地图片] 初始化失败:', error.message);
+    }
+}
+
+function registerCommandSuggest(ctx, cfg) {
+    try {
+        const names = collectCommandNames(cfg);
+        commandSuggestMiddleware.register(ctx, cfg, names);
+        if (cfg.debugMode) {
+            ctx.logger.debug(`[猜你想问] 已启用，候选指令 ${names.length} 个`);
+        }
+    } catch (error) {
+        ctx.logger.error("[猜你想问] 初始化失败:", error.message);
+    }
+}
+
+function logDisabledCommands(ctx, cfg) {    const commandFlags = cfg.commands || {};
     const enabled = [];
     const commandList = [
         { key: 'tmpQuery', label: '查询/绑定' },
@@ -259,11 +373,11 @@ function registerBaseCommands(ctx, cfg) {
     if (cfg.commands?.tmpServer) {
         ctx.command('美卡服务器')
             .usage("查询美国卡车模拟器TMP服务器信息")
-            .action(async () => await commands.tmpServer(ctx, cfg, 'ATS'));
+            .action(async ({ session }) => await commands.tmpServer(ctx, cfg, session, 'ATS'));
 
         ctx.command('欧卡服务器')
             .usage("查询欧洲卡车模拟2TMP服务器信息")
-            .action(async () => await commands.tmpServer(ctx, cfg, 'ETS2'));
+            .action(async ({ session }) => await commands.tmpServer(ctx, cfg, session, 'ETS2'));
     }
 
     if (cfg.commands?.tmpQuery) {
@@ -274,7 +388,7 @@ function registerBaseCommands(ctx, cfg) {
         ctx.command('我的绑定')
             .usage("查看已绑定的全部TMP编号（★ 为默认绑定）")
             .action(async ({ session }) => {
-                const bindings = await guildBind.list(ctx.database, session.platform, session.userId);
+                const bindings = await guildBind.listWithUnion(ctx.database, session.platform, session.userId, qqOfficial.buildIdentity(session));
                 if (bindings.length === 0) {
                     return '还没有绑定编号，使用「绑定 tmpId」添加';
                 }
@@ -297,9 +411,10 @@ function registerBaseCommands(ctx, cfg) {
                 if (!index || !index.trim()) {
                     return '请输入要设为默认的序号（序号见「我的绑定」）';
                 }
-                await guildBind.refreshNames(ctx, await guildBind.list(ctx.database, session.platform, session.userId));
-                const { row, changed, total } = await guildBind.setDefaultByIndex(
-                    ctx, ctx.database, session.platform, session.userId, index.trim()
+                const bindings = await guildBind.listWithUnion(ctx.database, session.platform, session.userId, qqOfficial.buildIdentity(session));
+                await guildBind.refreshNames(ctx, bindings);
+                const { row, changed, total } = await guildBind.setDefaultByIndexFromRows(
+                    ctx.database, bindings, index.trim()
                 );
                 if (!row) {
                     if (!total) {
@@ -316,7 +431,7 @@ function registerBaseCommands(ctx, cfg) {
             .example("解绑 2")
             .example("解绑 all")
             .action(async ({ session }, index) => {
-                const bindings = await guildBind.list(ctx.database, session.platform, session.userId);
+                const bindings = await guildBind.listWithUnion(ctx.database, session.platform, session.userId, qqOfficial.buildIdentity(session));
                 if (bindings.length === 0) {
                     return '还没有绑定编号';
                 }
@@ -324,8 +439,9 @@ function registerBaseCommands(ctx, cfg) {
                     return '请输入要解绑的序号或 all（序号见「我的绑定」）';
                 }
                 if (/^all$/i.test(index.trim())) {
-                    await guildBind.removeAll(ctx.database, session.platform, session.userId);
-                    return `已删除全部 ${bindings.length} 个绑定`;
+                    // 用「已查到的行」删除：跨群时 user_id 是对方群的 openid，不能再按 (platform,user_id) 反查
+                    const removed = await guildBind.removeAllFromRows(ctx.database, bindings);
+                    return `已删除全部 ${removed} 个绑定`;
                 }
                 const idx = parseInt(index, 10);
                 if (isNaN(idx) || idx < 1 || idx > bindings.length) {
@@ -334,7 +450,7 @@ function registerBaseCommands(ctx, cfg) {
                 // 到这一步才需要显示名字（成功文案 / 顶替提示）→ 此时刷新
                 await guildBind.refreshNames(ctx, bindings);
                 const row = bindings[idx - 1];
-                const { promoted } = await guildBind.remove(ctx.database, session.platform, session.userId, row.id);
+                const { promoted } = await guildBind.removeFromRows(ctx.database, bindings, row.id);
                 let msg = `已解绑 ${idx}. ${row.tmp_name || '未知'} (${row.tmp_id})`;
                 if (promoted) {
                     msg += `\n默认绑定已自动切换到 ${promoted.tmp_name || '未知'} (${promoted.tmp_id})`;
@@ -347,7 +463,7 @@ function registerBaseCommands(ctx, cfg) {
         ctx.command('路况 <serverName>')
             .usage("查询欧洲卡车模拟2服务器路况")
             .example("路况 - s1")
-            .action(async ({ session }, serverName) => await commands.tmpTraffic(ctx, cfg, serverName));
+            .action(async ({ session }, serverName) => await commands.tmpTraffic(ctx, cfg, session, serverName));
     }
 
     if (cfg.commands?.tmpPosition) {
@@ -359,7 +475,7 @@ function registerBaseCommands(ctx, cfg) {
     if (cfg.commands?.tmpVersion) {
         ctx.command('tmp版本')
             .usage("查询TruckersMP支持的游戏版本")
-            .action(async () => await commands.tmpVersion(ctx));
+            .action(async ({ session }) => await commands.tmpVersion(ctx, cfg, session));
     }
 
     if (cfg.commands?.tmpDlcMap) {
@@ -371,11 +487,11 @@ function registerBaseCommands(ctx, cfg) {
     if (cfg.commands?.tmpMileageRanking) {
         ctx.command('里程排行榜 [target]')
             .usage("查询欧洲卡车模拟2里程排行榜（可 @某人 查看对方的排名）")
-            .action(async ({ session }, target) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.total, target));
+            .action(async ({ session }, target) => await commands.tmpMileageRanking(ctx, cfg, session, MileageRankingType.total, target));
 
         ctx.command('今日里程排行榜 [target]')
             .usage("查询欧洲卡车模拟2今日里程排行榜（可 @某人 查看对方的排名）")
-            .action(async ({ session }, target) => await commands.tmpMileageRanking(ctx, session, MileageRankingType.today, target));
+            .action(async ({ session }, target) => await commands.tmpMileageRanking(ctx, cfg, session, MileageRankingType.today, target));
     }
 
     if (cfg.commands?.tmpVtcMileageRanking) {
@@ -532,6 +648,12 @@ function apply(ctx, cfg) {
 
     // 多绑定选择器中间件（捕获用户回复的序号，完成"列出绑定→序号选择"交互）
     tmpIdPicker.register(ctx);
+
+    // 「猜你想问」中间件：指令打错时给出提示（只提示不执行）
+    registerCommandSuggest(ctx, cfg);
+
+    // 本地图片托管：配置了公网地址时，图片以本地文件 + 公网 URL 提供
+    setupLocalImageHost(ctx, cfg);
 
     try {
         model(ctx);

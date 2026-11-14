@@ -1,9 +1,13 @@
+const qqOfficial = require('../../../util/qqOfficial');
 module.exports = async (ctx, cfg, session, target, changeType, quantity, reason) => {
     const { url, token, logOutput } = cfg.mainSettings?.settings || {};
     const { adminUsers } = cfg.changePoint?.settings || {};
     const currentUserQQ = session.userId;
     const isPrivateChat = session.channelId === `private:${currentUserQQ}`;
     const isAdmin = adminUsers.includes(currentUserQQ);
+    // QQ 官方机器人：只能拿到 unionid，没有 QQ 号
+    const official = qqOfficial.isQQOfficial(session);
+    const officialIdent = official ? qqOfficial.getQQIdentity(session) : null;
 
     const log = (msg) => logOutput && ctx.logger.info(msg);
 
@@ -43,16 +47,33 @@ module.exports = async (ctx, cfg, session, target, changeType, quantity, reason)
         let userId;
 
         if (target) {
-            const parsedQQ = parseAtQQ(target);
-            const isQQ = parsedQQ && /^\d+$/.test(parsedQQ);
-            const isTeamId = !isQQ && /^\d+$/.test(target);
+            // 只有真正的 <at ...> 才算 QQ 号来源；纯数字既可能是 QQ 也可能是车队编号，
+            // 旧代码用 parseAtQQ 的“原样返回”会把车队编号误判成 QQ，这里显式区分。
+            const isAtMention = String(target).startsWith("<at ");
+            const parsedQQ = isAtMention ? parseAtQQ(target) : null;
+            const atId = parsedQQ && /^\d+$/.test(parsedQQ) ? parsedQQ : null;
+            const isTeamId = !isAtMention && /^\d+$/.test(target);
 
             let queryUrl;
-            if (isQQ) {
-                queryUrl = `https://${baseUrl}/api/user/info/list?page=0&limit=7&tmpId=&tmpName=&teamId=&qq=${encodeURIComponent(parsedQQ)}&state=0&teamRole=&token=${token}`;
-                log(`[V1] 通过QQ号查询成员: ${parsedQQ}`);
+            if (official) {
+                // 官方机器人：@ 拿到的是 openid 不是 QQ 号，只能按车队编号
+                if (isAtMention) {
+                    return "QQ 官方机器人暂不支持通过 @ 指定成员，请改用车队编号（如「积分修改 789 增加 10 备注」）";
+                }
+                if (!officialIdent || !officialIdent.unionId) {
+                    return "未获取到 unionid，无法执行积分修改。请确认机器人已开通 unionid 权限";
+                }
+                if (isTeamId) {
+                    queryUrl = `https://${baseUrl}/api/user/info/list?token=${token}&page=1&limit=7&tmpId=&tmpName=&teamId=${encodeURIComponent(target)}&qq=&unionid=&state=0&teamRole=&isExecutive=&isManager=&adminUserId=`;
+                    log(`[V1] 通过车队编号查询成员: ${target}`);
+                } else {
+                    return "目标用户格式不正确，请输入车队编号";
+                }
+            } else if (isAtMention && atId) {
+                queryUrl = `https://${baseUrl}/api/user/info/list?token=${token}&page=1&limit=7&tmpId=&tmpName=&teamId=&qq=${encodeURIComponent(atId)}&unionid=&state=0&teamRole=&isExecutive=&isManager=&adminUserId=`;
+                log(`[V1] 通过QQ号查询成员: ${atId}`);
             } else if (isTeamId) {
-                queryUrl = `https://${baseUrl}/api/user/info/list?page=0&limit=7&tmpId=&tmpName=&teamId=${encodeURIComponent(target)}&qq=&state=0&teamRole=&token=${token}`;
+                queryUrl = `https://${baseUrl}/api/user/info/list?token=${token}&page=1&limit=7&tmpId=&tmpName=&teamId=${encodeURIComponent(target)}&qq=&unionid=&state=0&teamRole=&isExecutive=&isManager=&adminUserId=`;
                 log(`[V1] 通过车队编号查询成员: ${target}`);
             } else {
                 return "目标用户格式不正确，请输入车队编号或@群成员";
