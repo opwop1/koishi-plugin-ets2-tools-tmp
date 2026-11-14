@@ -8,7 +8,7 @@
  *   因为走元素层无法控制按钮分行（br 无效、多个 button-group 会产生空行）。
  *
  * 所有函数都返回可交给 session.send 的内容；
- * 官方机器人下若已由本模块直接发送，则返回 SENT 标记由调用方忽略。
+ * 官方机器人下若已由本模块直接发送，则返回 undefined（Koishi 会视为「无需回复」）。
  */
 
 const qqOfficial = require('./qqOfficial');
@@ -16,8 +16,6 @@ const qqMediaUpload = require('./qqMediaUpload');
 const qqMarkdown = require('./qqMarkdown');
 const localImageHost = require('./localImageHost');
 
-/** 表示「消息已由本模块直接发送完毕」，调用方无需再返回内容 */
-const SENT = Symbol('qq-message-sent');
 
 /**
  * 是否应使用图片形式。
@@ -68,7 +66,7 @@ async function renderText(session, text, opts) {
             markdown: useMarkdown ? body : '',
             buttons,
         });
-        if (sent) return SENT;
+        if (sent) return undefined;
     }
 
     // 回退：元素层（按钮可能挤在一行，但至少能发出去）
@@ -127,17 +125,21 @@ async function renderImage(session, imageSegment, opts) {
 
 /**
  * 把图片塞进 markdown 正文，与按钮共用一条消息。
- * @returns {Promise<Symbol|Array<object>|null>} 成功返回 SENT；退化时返回元素数组；失败返回 null
+ * @returns {Promise<undefined|Array<object>|null>} 已直接发送时返回 undefined；退化时返回元素数组；失败返回 null
  */
 async function renderInlineImage(session, imageSegment, buttons, options) {
+    const log = getLogger(session);
+
     let imageUrl = null;
     try {
         imageUrl = await options.uploader(imageSegment);
     } catch (error) {
+        if (log) log.warn(`[消息输出] 图片转换失败: ${error.message}，将退化为普通图片发送`);
         imageUrl = null;
     }
 
     if (!imageUrl) {
+        if (log) log.debug('[消息输出] 未取得图片 URL，退化为「图片 + 按钮」两条消息');
         // 上传失败：交给调用方退化处理
         if (buttons.length === 0) return null;
         const children = [imageSegment];
@@ -155,11 +157,22 @@ async function renderInlineImage(session, imageSegment, buttons, options) {
     // 原生发送（一条消息：图片 + 按钮）
     if (typeof session?.bot?.internal?.sendMessage === 'function') {
         const sent = await qqMarkdown.sendMarkdownWithButtons(session, { markdown, buttons });
-        if (sent) return SENT;
+        if (sent) {
+            if (log) log.debug(`[消息输出] 已发送 markdown 图片消息（图片: ${imageUrl}）`);
+            return undefined;
+        }
+        if (log) log.warn('[消息输出] 原生 markdown 发送失败，回退元素层');
     }
 
     // 回退元素层
     return qqOfficial.markdownWithButtons(markdown, buttons);
+}
+
+/** 取 logger（容错：不同环境 session 结构不同） */
+function getLogger(session) {
+    return (session && session.app && session.app.logger) ||
+        (session && session.bot && session.bot.logger) ||
+        null;
 }
 
 /**
@@ -203,11 +216,19 @@ async function renderByType(ctx, session, cfg, typePath, content) {
  * 2. 否则退回 QQ 官方 media-images 上传（有限制，但可用）
  */
 async function buildUploader(ctx, cfg, session) {
+    // 非官方机器人（onebot 等）：图片原样发送，不需要任何上传
+    if (!qqOfficial.isQQOfficial(session)) {
+        return null;
+    }
+    const log = getLogger(session);
     // 有公网域名：走本地文件 + 静态路由
     if (ctx && localImageHost.getPublicBaseUrl(cfg)) {
         return (seg) => localImageHost.saveImageForPublicUrl(ctx, cfg, seg);
     }
     // 回退：QQ 官方素材上传
+    if (log) {
+        log.info('[消息输出] 未配置 qqOfficial.publicBaseUrl，图片将走 QQ 官方素材上传（手机端可能显示 [image]，且有 100 张上限）');
+    }
     return (seg) => qqMediaUpload.uploadImageForMarkdown(session, seg);
 }
 
@@ -223,7 +244,6 @@ function readType(cfg, path) {
 }
 
 module.exports = {
-    SENT,
     wantImage,
     markdownText,
     renderText,

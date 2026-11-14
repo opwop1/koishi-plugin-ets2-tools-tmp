@@ -1,20 +1,21 @@
+const qqOfficial = require('./qqOfficial');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
 /**
  * 本地图片托管：把截图写成文件，并注册 HTTP 路由对外提供公网 URL。
  *
  * 为什么需要它：
- * - QQ 官方机器人的 qqbot-media 方案有「单机器人 100 张」上限，且手机端不渲染；
+ * - QQ 官方机器人的 qqbot-media 方案有「单机器人 100 张」上限，且**手机端不渲染**（显示 [image]）；
  * - markdown 里用**公网 https URL** 是最稳妥的（所有客户端都支持）。
  *
- * 用法：配置 publicBaseUrl（如 https://bd.114512.xyz:5155）后，
- * 本模块会把图片存到 <data>/tmp-images/<hash>.png，
+ * 用法：配置 publicBaseUrl（如 https://bot.example.com）后，
+ * 本模块会把图片存到 <baseDir>/data/tmp-images/<hash>.png，
  * 并提供 <publicBaseUrl>/tmp-images/<hash>.png 的访问地址。
  *
- * 依赖：Koishi 的 server 服务（koishi.yml 里已有 server 插件）。
+ * 依赖：Koishi 的 server 服务（koishi.yml 里需要启用 server 插件）。
  */
-
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 
 /** 路由前缀 */
 const ROUTE_PREFIX = '/tmp-images';
@@ -38,8 +39,8 @@ function resolveImageDir(ctx) {
 
 /**
  * 从公网地址里取 URL 路径前缀（子路径部署时用）。
- * 例如 https://bot.114512.xyz/koishi → '/koishi'
- *      https://bot.114512.xyz        → ''
+ * 例如 https://bot.example.com/koishi → '/koishi'
+ *      https://bot.example.com        → ''
  */
 function getPathPrefix(cfg) {
     const base = getPublicBaseUrl(cfg);
@@ -53,18 +54,25 @@ function getPathPrefix(cfg) {
     }
 }
 
+/** 取 logger（容错） */
+function getLogger(ctx) {
+    return (ctx && ctx.logger) || null;
+}
+
 /**
  * 注册静态路由（幂等）。
  *
  * 路由会带上公网地址里的子路径前缀，保证「生成的 URL」和「实际挂载路径」一致。
- * 例如配置 https://bot.114512.xyz/koishi 时，路由为 /koishi/tmp-images/:name。
  *
  * @param {object} ctx koishi context
  * @param {object} cfg 插件配置
  * @returns {string|null} 图片目录；server 服务不可用时返回 null
  */
 function registerStaticRoute(ctx, cfg) {
+    const log = getLogger(ctx);
+
     if (!ctx.server || typeof ctx.server.get !== 'function') {
+        if (log) log.warn('[本地图片] ctx.server 不可用：请确认已启用 server 插件，且插件 inject 中声明了 server');
         return null;
     }
     if (registered.has(ctx)) {
@@ -75,7 +83,7 @@ function registerStaticRoute(ctx, cfg) {
     try {
         fs.mkdirSync(dir, { recursive: true });
     } catch (error) {
-        ctx.logger.warn(`[本地图片] 创建目录失败: ${error.message}`);
+        if (log) log.warn(`[本地图片] 创建目录失败: ${error.message}`);
         return null;
     }
 
@@ -107,6 +115,7 @@ function registerStaticRoute(ctx, cfg) {
     });
 
     registered.add(ctx);
+    if (log) log.debug(`[本地图片] 已注册路由 ${routePath} → ${dir}`);
     return dir;
 }
 
@@ -129,14 +138,15 @@ function cleanupExpired(ctx, dir) {
             } catch { }
         }
     } catch { }
-    if (removed > 0 && ctx.logger) {
-        ctx.logger.debug(`[本地图片] 已清理 ${removed} 个过期文件`);
-    }
+    const log = getLogger(ctx);
+    if (removed > 0 && log) log.debug(`[本地图片] 已清理 ${removed} 个过期文件`);
     return removed;
 }
 
 /**
  * 把图片元素存成本地文件，返回可公网访问的 URL。
+ *
+ * 每一步失败都会打日志，方便定位「图片为什么退化成普通发送」。
  *
  * @param {object} ctx koishi context
  * @param {object} cfg 插件配置（需要 qqOfficial.publicBaseUrl）
@@ -144,20 +154,34 @@ function cleanupExpired(ctx, dir) {
  * @returns {Promise<string|null>} 公网 URL；未配置或失败返回 null
  */
 async function saveImageForPublicUrl(ctx, cfg, imageSegment) {
+    const log = getLogger(ctx);
+
     const baseUrl = getPublicBaseUrl(cfg);
-    if (!baseUrl) return null;
+    if (!baseUrl) {
+        if (log) log.warn('[本地图片] 未配置 qqOfficial.publicBaseUrl：图片将走 QQ 官方素材上传（有 100 张上限，手机端可能显示 [image]）');
+        return null;
+    }
 
     const dir = registerStaticRoute(ctx, cfg);
     if (!dir) return null;
 
     const src = imageSegment && imageSegment.attrs && (imageSegment.attrs.src || imageSegment.attrs.url);
-    if (!src) return null;
+    if (!src) {
+        if (log) log.warn('[本地图片] 图片元素里没有 src/url，无法保存');
+        return null;
+    }
 
     // 已是公网 URL：直接返回
-    if (/^https?:\/\//i.test(src)) return src;
+    if (/^https?:\/\//i.test(src)) {
+        if (log) log.debug(`[本地图片] 图片已是公网 URL，直接使用: ${src}`);
+        return src;
+    }
 
     const m = /^data:([^;]+);base64,(.*)$/s.exec(src);
-    if (!m) return null;
+    if (!m) {
+        if (log) log.warn(`[本地图片] 图片既不是 data URI 也不是 http URL（src 前缀: ${String(src).slice(0, 30)}）`);
+        return null;
+    }
 
     const mime = String(m[1] || '').toLowerCase();
     const ext = mime === 'image/png' ? 'png'
@@ -168,10 +192,14 @@ async function saveImageForPublicUrl(ctx, cfg, imageSegment) {
     let buffer;
     try {
         buffer = Buffer.from(m[2], 'base64');
-    } catch {
+    } catch (error) {
+        if (log) log.warn(`[本地图片] base64 解码失败: ${error.message}`);
         return null;
     }
-    if (!buffer.length) return null;
+    if (!buffer.length) {
+        if (log) log.warn('[本地图片] 图片内容为空');
+        return null;
+    }
 
     // 按内容 hash 命名：同一张图不重复写盘
     const hash = crypto.createHash('sha1').update(buffer).digest('hex').slice(0, 20);
@@ -181,18 +209,18 @@ async function saveImageForPublicUrl(ctx, cfg, imageSegment) {
     try {
         if (!fs.existsSync(filePath)) {
             fs.writeFileSync(filePath, buffer);
-            // 顺手清理过期文件
             cleanupExpired(ctx, dir);
         } else {
-            // 命中已有文件：刷新 mtime，延长保留期
             try { fs.utimesSync(filePath, new Date(), new Date()); } catch { }
         }
     } catch (error) {
-        ctx.logger.warn(`[本地图片] 写入失败: ${error.message}`);
+        if (log) log.warn(`[本地图片] 写入文件失败: ${error.message}（目录: ${dir}）`);
         return null;
     }
 
-    return `${baseUrl}${ROUTE_PREFIX}/${fileName}`;
+    const url = `${baseUrl}${ROUTE_PREFIX}/${fileName}`;
+    if (log) log.info(`[本地图片] 已保存 ${Math.round(buffer.length / 1024)}KB → ${url}`);
+    return url;
 }
 
 /**

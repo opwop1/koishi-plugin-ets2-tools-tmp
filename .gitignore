@@ -16,3 +16,6 @@ tsconfig.tsbuildinfo
 *.njsproj
 *.sln
 .workbuddy
+
+# 运行时生成的本地图片缓存（不应提交）
+data/
