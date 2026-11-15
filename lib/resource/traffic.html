@@ -246,28 +246,28 @@
   <script>
     let mapConfig = {
       ets: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-ets-yellow/Tiles/{z}/{x}/{y}.png',
-        multipliers: { x: 70272, y: 76157 },
+        tileUrl: 'https://ets_tiles.114512.xyz/20260903/tmp-ets-yellow/Tiles/{z}/{x}/{y}.png',
+        multipliers: { x: 70270.821, y: 76151.143 },
         breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
         bounds: { y: 131072, x: 131072 },
         maxZoom: 8, minZoom: 2,
         calculateMapCoordinate(x, y) {
-          return [x / 1.609055 + mapConfig.ets.multipliers.x, y / 1.609055 + mapConfig.ets.multipliers.y];
+          return [x / 1.610588 + mapConfig.ets.multipliers.x, y / 1.610588 + mapConfig.ets.multipliers.y];
         }
       },
       promods: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-promods-yellow/Tiles/{z}/{x}/{y}.png',
-        multipliers: { x: 51953, y: 76024 },
+        tileUrl: 'https://ets_tiles.114512.xyz/20260903/tmp-promods-yellow/Tiles/{z}/{x}/{y}.png',
+        multipliers: { x: 51964.369, y: 76019.089 },
         breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
         bounds: { y: 131072, x: 131072 },
         maxZoom: 8, minZoom: 2,
         calculateMapCoordinate(x, y) {
-          return [x / 2.598541 + mapConfig.promods.multipliers.x, y / 2.598541 + mapConfig.promods.multipliers.y];
+          return [x / 2.600054 + mapConfig.promods.multipliers.x, y / 2.600054 + mapConfig.promods.multipliers.y];
         }
       },
       // 美卡（ATS）：换算参数来自瓦片导出配置 TileMapInfo.json（tmp-ats-promods）
       ats: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-ats-promods-yellow/Tiles/{z}/{x}/{y}.png',
+        tileUrl: 'https://ets_tiles.114512.xyz/20260903/tmp-ats-promods-yellow/Tiles/{z}/{x}/{y}.png',
         multipliers: { x: 97335.94, y: 70182.92 },
         breakpoints: {},
         bounds: { y: 131072, x: 131072 },
@@ -293,6 +293,23 @@
     };
 
     function setData(data) {
+      // 动态瓦片参数：由插件从服务器上的 TileMapInfo.json 实时计算后传入
+      // 传了就覆盖内置参数，这样更新地图无需改代码
+      if (data && data.tileParams) {
+        for (const key of Object.keys(data.tileParams)) {
+          const p = data.tileParams[key];
+          if (!p || !mapConfig[key]) continue;
+          mapConfig[key].multipliers = { x: p.offsetX, y: p.offsetY };
+          mapConfig[key].maxZoom = p.maxZoom;
+          mapConfig[key].minZoom = p.minZoom;
+          const scale = p.scale;
+          mapConfig[key].calculateMapCoordinate = function (x, y) {
+            return [x / scale + p.offsetX, y / scale + p.offsetY];
+          };
+        }
+      }
+
+
       let bounds = L.latLngBounds(
         map.unproject([0, mapConfig[data.mapType].bounds.y], mapConfig[data.mapType].maxZoom),
         map.unproject([mapConfig[data.mapType].bounds.x, 0], mapConfig[data.mapType].maxZoom)

@@ -154,11 +154,18 @@ async function sendMarkdownWithButtons(session, content) {
         if (log) {
             // 只打印关键信息，避免刷屏
             const mdPreview = String(data.markdown.content || '').replace(/\n/g, '\\n');
+            // 检测 markdown 里的图片 URL 协议：QQ 官方要求 https，http 在手机端会显示 [image]
+            const imgMatch = /!\[[^\]]*\]\(([^)]+)\)/.exec(String(data.markdown.content || ''));
+            const imgProto = imgMatch ? (String(imgMatch[1]).startsWith('https://') ? 'https' : String(imgMatch[1]).split(':')[0]) : '(无图片)';
             log.info(`[markdown发送] channel=${session.channelId} isDirect=${!!session.isDirect} `
                 + `msg_id=${data.msg_id || '-'} msg_seq=${data.msg_seq || '-'} event_id=${data.event_id || '-'} `
                 + `rows=${data.keyboard ? data.keyboard.content.rows.length : 0} `
-                + `能含图片=${/!\[[^\]]*\]\([^)]*\)/.test(data.markdown.content)} `
+                + `能含图片=${!!imgMatch} 图片协议=${imgProto} `
                 + `content=${mdPreview.slice(0, 120)}`);
+            if (imgMatch && imgProto !== 'https') {
+                log.warn(`[markdown发送] 图片 URL 不是 https（${imgMatch[1]}）！`
+                    + 'QQ 官方 markdown 图片要求 https，手机端可能显示 [image]');
+            }
         }
         if (session.isDirect) {
             return await bot.internal.sendPrivateMessage(session.channelId, data);

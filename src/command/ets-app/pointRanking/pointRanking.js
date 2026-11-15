@@ -1,6 +1,7 @@
 const { segment } = require('koishi');
 const { resolve } = require('path');
 const common = require('../../../util/common');
+const imageSizeUtil = require('../../../util/imageSize');
 
 module.exports = async (ctx, cfg, session) => {
     // 群组限制检查
@@ -138,17 +139,26 @@ module.exports = async (ctx, cfg, session) => {
         try {
             page = await ctx.puppeteer.page();
             await page.setViewport({ width: 800, height: 1200, deviceScaleFactor: 2 });
-            await page.goto(`file:///${resolve(__dirname, '../../../resource/point-leaderboard.html')}`);
+            await page.goto(`file:///${resolve(__dirname, '../../../resource/point-leaderboard.html')}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
             await page.evaluate(`setData(${JSON.stringify(data)})`);
-            await page.waitForNetworkIdle();
+            await page.waitForNetworkIdle({ timeout: 15000 }).catch(() => { });
             await common.sleep(800);
             const element = await page.$("#container");
-            return segment.image(await element.screenshot({
+        if (!element) throw new Error('未找到容器元素（模板可能未加载完成）');
+            // 把真实尺寸挂到元素上，markdown 才能写出精确宽高（否则手机端拉伸变形）
+            const box = await imageSizeUtil.measureElement(page);
+            const img = segment.image(await element.screenshot({
                 encoding: "binary"
             }), "image/jpeg");
+            if (box && img && img.attrs) {
+                const size = imageSizeUtil.fitForTemplate('point-leaderboard.html', box.width, box.height);
+                img.attrs.width = size.width;
+                img.attrs.height = size.height;
+            }
+            return img;
         }
         catch (e) {
-            log(`[积分排行] 渲染异常: ${e.message}`);
+            ctx.logger.error(`[渲染] pointRanking 失败: ${e && e.message || e}`, e && e.stack ? e.stack : '');
             return '渲染异常，请重试';
         }
         finally {

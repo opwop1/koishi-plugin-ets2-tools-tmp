@@ -225,6 +225,11 @@
     function init(data) {
       if (!data) return;
 
+      // 动态瓦片参数（由插件从服务器 TileMapInfo.json 实时计算）
+      if (data.tileParams && typeof applyTileParams === 'function') {
+        applyTileParams(data.tileParams);
+      }
+
       document.getElementById('username').innerText = data.name || 'Unknown';
       document.getElementById('range-title').innerText = `${data.rangeText || ''} · 行驶足迹`;
       if (data.smallAvatarUrl) {

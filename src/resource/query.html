@@ -1026,30 +1026,30 @@
   <script>
     let mapConfig = {
       ets: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-ets-yellow/Tiles/{z}/{x}/{y}.png',
-        multipliers: { x: 70272, y: 76157 },
+        tileUrl: 'https://ets_tiles.114512.xyz/20260903/tmp-ets-yellow/Tiles/{z}/{x}/{y}.png',
+        multipliers: { x: 70270.821, y: 76151.143 },
         breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
         bounds: { y: 131072, x: 131072 },
         maxZoom: 8,
         minZoom: 2,
         calculateMapCoordinate (x, y) {
-          return [x / 1.609055 + mapConfig.ets.multipliers.x, y / 1.609055 + mapConfig.ets.multipliers.y];
+          return [x / 1.610588 + mapConfig.ets.multipliers.x, y / 1.610588 + mapConfig.ets.multipliers.y];
         }
       },
       promods: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-promods-yellow/Tiles/{z}/{x}/{y}.png',
-        multipliers: { x: 51953, y: 76024 },
+        tileUrl: 'https://ets_tiles.114512.xyz/20260903/tmp-promods-yellow/Tiles/{z}/{x}/{y}.png',
+        multipliers: { x: 51964.369, y: 76019.089 },
         breakpoints: { uk: { x: -31056.8, y: -5832.867 } },
         bounds: { y: 131072, x: 131072 },
         maxZoom: 8,
         minZoom: 2,
         calculateMapCoordinate (x, y) {
-          return [x / 2.598541 + mapConfig.promods.multipliers.x, y / 2.598541 + mapConfig.promods.multipliers.y];
+          return [x / 2.600054 + mapConfig.promods.multipliers.x, y / 2.600054 + mapConfig.promods.multipliers.y];
         }
       },
       // 美卡（ATS）：换算参数来自瓦片导出配置 TileMapInfo.json（tmp-ats-promods）
       ats: {
-        tileUrl: 'https://ets_tiles.cnly.top/20260903/tmp-ats-promods-yellow/Tiles/{z}/{x}/{y}.png',
+        tileUrl: 'https://ets_tiles.114512.xyz/20260903/tmp-ats-promods-yellow/Tiles/{z}/{x}/{y}.png',
         multipliers: { x: 97335.94, y: 70182.92 },
         breakpoints: {},
         bounds: { y: 131072, x: 131072 },
@@ -1532,7 +1532,25 @@
       return d.getFullYear() + '年' + String(d.getMonth() + 1).padStart(2, '0') + '月' + String(d.getDate()).padStart(2, '0') + '日 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     }
 
+    // 动态瓦片参数（由插件注入，覆盖内置值）
+    let tileParamsOverride = null;
+
     function map(mapType, x, y) {
+      // 应用动态参数
+      if (tileParamsOverride) {
+        for (const key of Object.keys(tileParamsOverride)) {
+          const p = tileParamsOverride[key];
+          if (!p || !mapConfig[key]) continue;
+          mapConfig[key].multipliers = { x: p.offsetX, y: p.offsetY };
+          mapConfig[key].maxZoom = p.maxZoom;
+          mapConfig[key].minZoom = p.minZoom;
+          const scale = p.scale;
+          mapConfig[key].calculateMapCoordinate = function (x, y) {
+            return [x / scale + p.offsetX, y / scale + p.offsetY];
+          };
+        }
+        tileParamsOverride = null;  // 只应用一次
+      }
       let map = L.map('map', { attributionControl: false, crs: L.CRS.Simple, zoomControl: false });
       let bounds = L.latLngBounds(
         map.unproject([0, mapConfig[mapType].bounds.y], mapConfig[mapType].maxZoom),

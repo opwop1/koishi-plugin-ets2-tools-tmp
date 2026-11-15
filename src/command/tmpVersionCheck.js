@@ -419,10 +419,10 @@ class VersionCheckService {
 
             page = await this.ctx.puppeteer.page();
             await page.setViewport({ width: 560, height: 900, deviceScaleFactor: 2 });
-            await page.goto(`file:///${htmlPath}`);
+            await page.goto(`file:///${htmlPath}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
             await page.evaluate(`setData(${JSON.stringify(data)})`);
             await common_1.sleep(100);
-            await page.waitForNetworkIdle();
+            await page.waitForNetworkIdle({ timeout: 15000 }).catch(() => { });
 
             const element = await page.$("#container");
             if (!element) {
